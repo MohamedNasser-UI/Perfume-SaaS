@@ -1,0 +1,2238 @@
+Absolutely. Below is the complete PRD in the chat.
+
+# PRD — Perfume Customization Sales Outlet System
+
+**Version:** 1.0 — MVP
+**Initial Deployment:** One outlet
+**Currency:** EGP
+**System Type:** Retail POS + Custom Perfume Configuration + Inventory + Procurement + Supplier Ledger + CRM
+
+---
+
+## 1. Executive Summary
+
+The system is a **Perfume Customization Sales Outlet Management System** designed for an outlet that sells:
+
+1. Customized perfumes prepared at the outlet.
+2. Original ready-made perfumes.
+3. High-copy ready-made perfumes.
+
+The system connects the full operational cycle:
+
+**Procurement → Inventory → Perfume Configuration → Sales → Consumption → Customer History → Supplier Balances → Returns → Finished Inventory**
+
+The MVP will initially support **one physical outlet**. Multiple users can operate the outlet, and all users will initially have full access.
+
+The system must be configuration-driven so the owner can change pricing, markup, concentration percentages, discounts, products, suppliers, bottles, packaging, and other business parameters without modifying the application.
+
+---
+
+# 2. Business Objectives
+
+The system should:
+
+* Eliminate manual sales calculations.
+* Track all purchased components.
+* Maintain accurate on-hand inventory.
+* Automatically calculate component consumption when a customized perfume is sold.
+* Calculate weighted-average inventory cost.
+* Calculate selling price using cost + configurable markup.
+* Maintain supplier balances and statements.
+* Record supplier payments.
+* Track waste, damage, and spillage.
+* Maintain customer profiles.
+* Use Egyptian mobile number as the unique customer identifier.
+* Store complete customer purchase history.
+* Allow salespeople to reproduce previous perfume configurations.
+* Support customer-supplied bottles.
+* Support original and high-copy ready-made perfumes.
+* Support returns.
+* Convert returned customized perfumes into finished inventory.
+* Provide profitability and operational reporting.
+* Prepare the architecture for future online sales and multiple outlets.
+
+---
+
+# 3. Scope
+
+## 3.1 MVP In Scope
+
+### Master Data
+
+* Users
+* Outlet
+* Customers
+* Suppliers
+* Oils
+* Alcohol
+* Stabilizers
+* Bottles
+* Pumps
+* Packaging
+* Ready-made perfumes
+* Concentrations
+* Product classifications
+* Pricing configuration
+* Discount configuration
+
+### Procurement
+
+* Purchase invoices
+* Multi-line purchase invoices
+* Supplier-specific purchase costs
+* Multiple suppliers for the same item
+* Supplier credit terms
+* Supplier credit limits
+* Supplier balances
+* Supplier statements
+* Supplier payments
+
+### Inventory
+
+* Component inventory
+* Finished-product inventory
+* Weighted-average costing
+* Purchase receipts
+* Sales consumption
+* Waste
+* Damage
+* Spillage
+* Stock adjustments
+* Stock counts
+* Opening balances
+* Packaging inventory
+* Customer-supplied bottles
+
+### Sales
+
+* Customized perfume sales
+* Original perfume sales
+* High-copy perfume sales
+* Multiple lines per order
+* Order-level discounts
+* Cash/Visa/Instapay payment
+* Returns
+* Customer history
+* Previous configuration repeat
+
+---
+
+# 4. Out of Scope for MVP
+
+The following should be designed for future expansion but not required initially:
+
+* Purchase Orders
+* Employee permission levels
+* Multi-branch management
+* Full accounting/general ledger
+* Payroll
+* Advanced warehouse management
+* E-commerce storefront
+* Delivery management
+* Loyalty points
+* Advanced promotions
+* Automated purchasing
+* Complex tax accounting
+* Advanced batch/expiry management
+
+---
+
+# 5. Users
+
+The outlet can have:
+
+* One user
+* Multiple users
+
+Initially, all users have **full access**.
+
+However, every important transaction must record:
+
+* Created by
+* Created date/time
+* Updated by
+* Updated date/time
+
+This will allow future role-based access without redesigning the application.
+
+---
+
+# 6. Product Types
+
+The system initially supports three product classifications:
+
+### 1. Customized
+
+Perfume prepared at the outlet from components.
+
+### 2. Original
+
+Original branded ready-made perfume.
+
+### 3. High Copy
+
+Ready-made high-copy perfume.
+
+---
+
+# 7. Component Inventory
+
+Customized perfume can consume:
+
+* Oil
+* Alcohol
+* Stabilizer
+* Bottle
+* Pump
+* Box
+* Gift wrapping
+
+Each component is independently tracked.
+
+---
+
+# 8. Oil Master
+
+Each oil must have:
+
+* Oil Code
+* Oil Name
+* Supplier relationships
+* Purchase unit
+* Consumption unit
+* Weighted-average cost
+* Active/inactive status
+
+### Purchase Unit
+
+Oil is purchased in **liters**.
+
+### Consumption Unit
+
+Oil is consumed in **milliliters**.
+
+The system must convert:
+
+**1 Liter = 1,000 ml**
+
+Example:
+
+Purchase:
+
+> 5 liters
+
+Inventory:
+
+> 5,000 ml
+
+Sale consumption:
+
+> 20 ml
+
+Remaining:
+
+> 4,980 ml
+
+---
+
+# 9. Multiple Suppliers
+
+The same oil/component can be purchased from multiple suppliers.
+
+Example:
+
+| Supplier   | Quantity |      Cost/L |
+| ---------- | -------: | ----------: |
+| Supplier A | 1,000 ml | 5,000 EGP/L |
+| Supplier B | 1,000 ml | 5,500 EGP/L |
+
+The system must preserve the purchase history for each supplier.
+
+Inventory costing uses **weighted-average cost**, not supplier-specific cost.
+
+---
+
+# 10. Alcohol
+
+The MVP starts with one alcohol type.
+
+The system should still treat alcohol as an inventory item.
+
+Alcohol is:
+
+* Purchased in liters
+* Consumed in milliliters
+* Valued using weighted-average cost
+
+---
+
+# 11. Stabilizer
+
+Stabilizer is optional.
+
+The salesperson can manually add it to a customized perfume.
+
+The salesperson enters the quantity.
+
+Example:
+
+100ml perfume:
+
+* Oil = 25ml
+* Stabilizer = 2ml
+* Alcohol = 73ml
+
+Therefore:
+
+**25 + 2 + 73 = 100ml**
+
+The system must prevent the total formula from exceeding the selected bottle volume.
+
+---
+
+# 12. Bottle Master
+
+Bottle attributes include:
+
+* Bottle Code
+* Bottle Type/Design
+* Size
+* Cost
+* Weighted-average cost
+* Active/inactive status
+
+Initial sizes include:
+
+* 30ml
+* 50ml
+* 100ml
+
+The system must allow additional sizes later.
+
+---
+
+# 13. Bottle and Pump Relationship
+
+Pumps are associated with bottle types.
+
+Example:
+
+> Bottle Type A → Pump Type A
+
+When the salesperson selects the bottle, the system automatically determines the compatible pump.
+
+The salesperson does not need to manually select the pump for normal outlet bottles.
+
+Bottle and pump are treated as a paired component relationship.
+
+---
+
+# 14. Customer-Supplied Bottle
+
+The system must support customers bringing their own bottle.
+
+If the customer supplies the bottle:
+
+### Consume
+
+* Oil
+* Alcohol
+* Stabilizer, if applicable
+* Packaging, if selected
+
+### Do not consume
+
+* Outlet bottle
+* Outlet pump
+
+The sale must be marked:
+
+> `Customer Supplied Bottle = Yes`
+
+The normal pricing structure remains applicable, but the **direct bottle cost is deducted** because the outlet did not provide the bottle.
+
+---
+
+# 15. Packaging
+
+Packaging is inventory-controlled.
+
+Examples:
+
+* No packaging
+* Standard box
+* Premium box
+* Gift wrapping
+
+Each packaging item has:
+
+* SKU
+* Name
+* Type
+* Cost
+* Inventory quantity
+* Active/inactive status
+
+If the customer selects a box:
+
+> Box inventory -1
+
+If no box:
+
+> Box consumption = 0
+
+---
+
+# 16. Concentration Configuration
+
+The initial concentration configuration is:
+
+| Concentration | Oil % | Alcohol % |
+| ------------- | ----: | --------: |
+| EDT           |   15% |       85% |
+| EDP           |   20% |       80% |
+| Parfum        |   30% |       70% |
+
+These percentages must be **configurable**.
+
+The owner should be able to modify the percentages later.
+
+---
+
+# 17. Standard Recipe Calculation
+
+The system calculates standard oil quantity based on:
+
+**Bottle Size × Oil Concentration %**
+
+Example:
+
+100ml EDP:
+
+**100 × 20% = 20ml oil**
+
+Without stabilizer:
+
+**100 − 20 = 80ml alcohol**
+
+Therefore:
+
+> Oil = 20ml
+> Alcohol = 80ml
+
+---
+
+# 18. Oil Quantity Override
+
+The standard recipe is only the default.
+
+The salesperson can change the oil quantity.
+
+Example:
+
+Standard 100ml EDP:
+
+> Oil = 20ml
+
+Customer requests stronger perfume.
+
+Salesperson enters:
+
+> Oil = 25ml
+
+The system automatically recalculates:
+
+> Alcohol = 75ml
+
+If stabilizer = 2ml:
+
+> Alcohol = 73ml
+
+The formula always remains:
+
+**Oil + Stabilizer + Alcohol = Bottle Size**
+
+The system must preserve both:
+
+* Standard oil quantity
+* Actual oil quantity
+
+and identify that an override occurred.
+
+---
+
+# 19. Customized Perfume Sales Process
+
+The standard workflow is:
+
+### Step 1 — Customer
+
+Search customer by mobile number.
+
+If customer doesn't exist:
+
+> Create customer.
+
+### Step 2 — Testing
+
+Customer tests available oils.
+
+### Step 3 — Oil
+
+Salesperson selects the chosen oil.
+
+### Step 4 — Concentration
+
+Customer chooses:
+
+* EDT
+* EDP
+* Parfum
+* Future configurations
+
+### Step 5 — Bottle
+
+Salesperson selects:
+
+* Bottle design
+* Bottle size
+
+### Step 6 — Recipe
+
+System calculates:
+
+* Standard oil quantity
+* Alcohol quantity
+
+### Step 7 — Override
+
+Salesperson can increase/decrease oil quantity.
+
+### Step 8 — Stabilizer
+
+Salesperson can optionally add stabilizer.
+
+### Step 9 — Pump
+
+System automatically determines the compatible pump.
+
+### Step 10 — Packaging
+
+Customer chooses:
+
+* No packaging
+* Box
+* Gift wrapping
+
+### Step 11 — Pricing
+
+System calculates component cost and selling price.
+
+### Step 12 — Discount
+
+Salesperson selects configured order discount.
+
+### Step 13 — Payment
+
+Customer pays using:
+
+* Cash
+* Visa
+* Instapay
+
+Only **one payment method per order**.
+
+### Step 14 — Posting
+
+System:
+
+* Saves order
+* Saves configuration
+* Records payment
+* Consumes inventory
+* Updates customer history
+* Calculates profit
+
+---
+
+# 20. Ready-Made Perfumes
+
+Ready-made perfumes are maintained as finished products.
+
+Each product should contain:
+
+* SKU
+* Product name
+* Brand
+* Product classification
+* Size
+* Barcode
+* Supplier
+* Purchase cost
+* Weighted-average cost
+* Selling price
+* On-hand quantity
+* Active/inactive status
+
+Examples:
+
+> Dior Sauvage 100ml — Original
+
+> Sauvage Style 100ml — High Copy
+
+Selling one unit:
+
+**Finished inventory -1**
+
+---
+
+# 21. Customized Configuration vs SKU
+
+The system should **not create a permanent SKU for every possible customized combination**.
+
+For example, combinations such as:
+
+> Oud + 50ml + EDP + Bottle A + Box
+
+and:
+
+> Oud + 50ml + EDP + Bottle B + No Box
+
+should be stored as **sales configurations**, not thousands of product SKUs.
+
+This makes the system scalable.
+
+---
+
+# 22. Sales Orders
+
+One customer can have multiple lines in one order.
+
+Example:
+
+### Order #10001
+
+Customer: Ahmed
+
+| Line | Product                | Qty | Price |
+| ---- | ---------------------- | --: | ----: |
+| 1    | Customized Oud 50ml    |   1 |   350 |
+| 2    | Customized Musk 100ml  |   1 |   600 |
+| 3    | Original Perfume 100ml |   1 | 2,000 |
+
+Subtotal:
+
+**2,950 EGP**
+
+---
+
+# 23. Order-Level Discount
+
+Discounts are applied to the **entire order**, not individual lines.
+
+Discount options are configurable.
+
+Example:
+
+* 5%
+* 10%
+* 15%
+
+If subtotal is:
+
+> 2,950 EGP
+
+and discount is 10%:
+
+> Discount = 295 EGP
+
+Final:
+
+> **2,655 EGP**
+
+The system should allow the owner to change the available discount options later.
+
+---
+
+# 24. Pricing Engine
+
+The MVP uses:
+
+**Selling Price = Cost × (1 + Markup %)**
+
+There is currently one global markup.
+
+There are no different markup rules for:
+
+* Oils
+* Bottles
+* Product categories
+* Concentrations
+
+Example:
+
+Material cost:
+
+> 214 EGP
+
+Markup:
+
+> 50%
+
+Selling price:
+
+**214 × 1.50 = 321 EGP**
+
+---
+
+# 25. Cost Calculation
+
+Customized perfume cost is based on the weighted-average cost of consumed components.
+
+Example:
+
+| Component |  Qty | Avg Cost |        Cost |
+| --------- | ---: | -------: | ----------: |
+| Oil       | 20ml |  5.25/ml |         105 |
+| Alcohol   | 80ml |  0.80/ml |          64 |
+| Bottle    |    1 |       30 |          30 |
+| Pump      |    1 |        5 |           5 |
+| Box       |    1 |       10 |          10 |
+| **Total** |      |          | **214 EGP** |
+
+The MVP considers this the **material cost**.
+
+Labor and overhead are not included initially.
+
+---
+
+# 26. Weighted-Average Cost
+
+After every purchase receipt:
+
+**New Average Cost =**
+
+`(Existing Quantity × Existing Average Cost + New Quantity × New Unit Cost) / New Total Quantity`
+
+Example:
+
+Existing inventory:
+
+> 1,000ml @ 5 EGP/ml
+
+Value:
+
+> 5,000 EGP
+
+New purchase:
+
+> 1,000ml @ 5.50 EGP/ml
+
+Value:
+
+> 5,500 EGP
+
+New inventory:
+
+> 2,000ml
+
+New value:
+
+> 10,500 EGP
+
+Weighted-average:
+
+**10,500 / 2,000 = 5.25 EGP/ml**
+
+A 20ml consumption therefore has a material cost of:
+
+**20 × 5.25 = 105 EGP**
+
+---
+
+# 27. Inventory Ledger
+
+The inventory ledger is the source of truth.
+
+Every movement must be recorded.
+
+Movement types:
+
+* Opening Balance
+* Purchase Receipt
+* Customized Sale Consumption
+* Ready-Made Sale
+* Return
+* Waste
+* Damage
+* Spillage
+* Stock Adjustment
+* Stock Count Adjustment
+
+The application should not simply allow users to edit an on-hand number without creating a transaction.
+
+---
+
+# 28. Automatic Consumption
+
+When a customized sale is posted, the system automatically generates inventory movements.
+
+Example:
+
+100ml EDP:
+
+* Oil = 20ml
+* Alcohol = 80ml
+* Bottle = 1
+* Pump = 1
+* Box = 1
+
+Inventory movements:
+
+> Oil -20ml
+
+> Alcohol -80ml
+
+> Bottle -1
+
+> Pump -1
+
+> Box -1
+
+If customer supplied bottle:
+
+> Bottle = 0
+
+> Pump = 0
+
+---
+
+# 29. Inventory Availability
+
+Before completing a sale, the system checks component availability.
+
+Example:
+
+Required:
+
+> 25ml Oud
+
+Available:
+
+> 10ml
+
+The system should show:
+
+> **Shortage: 15ml**
+
+The system should prevent negative inventory by default.
+
+---
+
+# 30. Procurement
+
+There is no Purchase Order process in the MVP.
+
+The outlet receives inventory directly through a:
+
+> **Purchase Invoice**
+
+---
+
+# 31. Purchase Invoice
+
+A purchase invoice contains:
+
+### Header
+
+* Supplier
+* Supplier invoice number
+* Invoice date
+* Posting date
+* Payment status
+* Notes
+* User
+
+### Lines
+
+* Item
+* Quantity
+* Unit
+* Unit cost
+* Total
+
+Example:
+
+| Item       | Qty | Unit  | Unit Cost |  Total |
+| ---------- | --: | ----- | --------: | -----: |
+| Oud Oil    |   5 | Liter |     5,000 | 25,000 |
+| Alcohol    |  20 | Liter |     1,000 | 20,000 |
+| Bottle B01 | 100 | PCS   |        30 |  3,000 |
+| Pump P01   | 100 | PCS   |         5 |    500 |
+| Gift Box   | 100 | PCS   |        10 |  1,000 |
+
+Total:
+
+**49,500 EGP**
+
+Posting the purchase must:
+
+1. Increase inventory.
+2. Update weighted-average cost.
+3. Increase supplier balance.
+4. Create supplier ledger transaction.
+
+---
+
+# 32. Supplier Management
+
+Supplier master contains:
+
+* Supplier ID
+* Supplier name
+* Contact person
+* Phone
+* Address
+* Credit terms
+* Credit limit
+* Active/inactive
+* Notes
+
+Multiple suppliers can provide the same component.
+
+---
+
+# 33. Supplier Credit Terms
+
+The system must store supplier credit terms.
+
+Examples:
+
+> Cash
+
+> 30 days
+
+> 60 days
+
+> 90 days
+
+The system should also store supplier credit limit.
+
+Example:
+
+> Credit limit = 100,000 EGP
+
+Current balance:
+
+> 85,000 EGP
+
+The system can warn the user when another purchase would exceed the limit.
+
+---
+
+# 34. Supplier Ledger
+
+Every supplier transaction must create a ledger entry.
+
+Transaction types:
+
+* Opening Balance
+* Purchase Invoice
+* Payment
+* Adjustment
+
+Example:
+
+| Date   | Transaction |  Debit | Credit | Balance |
+| ------ | ----------- | -----: | -----: | ------: |
+| 01-Aug | Opening     | 20,000 |        |  20,000 |
+| 05-Aug | Purchase    | 50,000 |        |  70,000 |
+| 10-Aug | Payment     |        | 20,000 |  50,000 |
+
+Supplier outstanding:
+
+**50,000 EGP**
+
+---
+
+# 35. Supplier Payments
+
+Supported payment methods:
+
+* Cash
+* Bank Transfer
+
+Payment record:
+
+* Supplier
+* Amount
+* Payment method
+* Date
+* Reference
+* Notes
+* User
+
+Posting payment reduces the supplier outstanding balance.
+
+---
+
+# 36. Customer Management
+
+Customer fields:
+
+* Customer ID
+* Name
+* Egyptian mobile number
+* Gender — optional
+* Created date
+* Updated date
+
+The mobile number is the **unique identifier**.
+
+Duplicate normalized mobile numbers must not create separate customer records.
+
+---
+
+# 37. Customer Purchase History
+
+The customer profile must show previous purchases.
+
+For every customized perfume, retain the exact configuration:
+
+* Oil
+* Oil quantity
+* Concentration
+* Bottle
+* Bottle size
+* Alcohol quantity
+* Stabilizer
+* Pump
+* Packaging
+* Cost
+* Selling price
+* Discount
+* Date
+
+---
+
+# 38. Repeat Previous Purchase
+
+A salesperson should be able to select a previous customized purchase:
+
+> **Repeat Configuration**
+
+The system creates a new sale line using the old configuration as the starting point.
+
+However, the system must recalculate:
+
+* Current component cost
+* Current weighted-average cost
+* Current markup
+* Current selling price
+* Current discount
+
+It should **not reuse the historical selling price automatically**.
+
+---
+
+# 39. Customer Preferences
+
+The system should support preferences such as:
+
+* Favorite oil
+* Preferred concentration
+* Preferred bottle size
+* Preferred packaging
+
+The system can also derive preferences from purchase history.
+
+Example:
+
+> Customer bought Oud 5 times.
+
+> Most frequently selected concentration = EDP.
+
+This can later become a recommendation engine.
+
+---
+
+# 40. Returns
+
+Returns are supported.
+
+## 40.1 Ready-Made Return
+
+If a ready-made perfume is returned and is sellable:
+
+> Finished inventory +1
+
+The return must be linked to the original sale.
+
+---
+
+# 41. Customized Returns
+
+Customized perfume returns are handled differently.
+
+The returned perfume should **not** be broken back into:
+
+> Oil + Alcohol + Stabilizer
+
+Instead, it becomes a finished customized perfume item.
+
+Example:
+
+Returned perfume:
+
+> 100ml
+> Oud
+> EDP
+> 25ml Oil
+> 73ml Alcohol
+> 2ml Stabilizer
+> Bottle B01
+> Pump P01
+
+The system creates:
+
+> **Finished Customized Inventory +1**
+
+The exact recipe remains attached to the finished item.
+
+---
+
+# 42. Future Online Sale
+
+A returned customized perfume can subsequently be sold to another customer, including through a future online channel.
+
+Therefore, finished customized inventory should be independent from the original customer after return.
+
+Example:
+
+### Original sale
+
+Ahmed purchases:
+
+> Oud 100ml EDP
+
+### Return
+
+Ahmed returns it.
+
+System:
+
+> Customized Finished Inventory +1
+
+### Future sale
+
+Online customer purchases:
+
+> Same returned perfume
+
+System:
+
+> Finished Customized Inventory -1
+
+This means the system must support **finished customized inventory as a sellable stock category**.
+
+---
+
+# 43. Waste
+
+The system must support waste transactions.
+
+Initial waste reasons:
+
+* Spillage
+* Damage
+* Wrong Mix
+* Other
+
+Waste record:
+
+* Item
+* Quantity
+* Unit
+* Reason
+* Notes
+* Date
+* User
+
+Example:
+
+> Oud Oil
+> 500ml
+> Reason: Spillage
+
+Inventory:
+
+> -500ml
+
+Waste value:
+
+> 500 × weighted-average cost
+
+---
+
+# 44. Stock Adjustments
+
+The system must support:
+
+* Opening balance
+* Positive adjustment
+* Negative adjustment
+* Stock count
+
+Every adjustment requires:
+
+* Item
+* Quantity
+* Reason
+* User
+* Date
+* Notes
+
+---
+
+# 45. Payment Rules
+
+One sales order can use **only one payment method**.
+
+Supported:
+
+* Cash
+* Visa
+* Instapay
+
+Example:
+
+Order total:
+
+> 1,000 EGP
+
+Payment:
+
+> VISA — 1,000 EGP
+
+The MVP does not support splitting an order between Cash + Visa, etc.
+
+---
+
+# 46. Transaction Atomicity
+
+A completed sale must update all relevant records together.
+
+A sale should simultaneously create/update:
+
+* Sales order
+* Sales lines
+* Payment
+* Inventory movements
+* Customized configuration
+* Customer history
+* Profit/cost information
+
+If one critical step fails, the transaction should not be partially posted.
+
+The same principle applies to:
+
+* Purchase invoices
+* Supplier payments
+* Returns
+
+---
+
+# 47. Core Inventory Formula
+
+For every item:
+
+**On Hand = Opening + Purchases + Returns − Sales Consumption − Waste ± Adjustments**
+
+This should be reconcilable to the inventory ledger.
+
+---
+
+# 48. Supplier Balance Formula
+
+**Supplier Balance = Opening Balance + Purchases − Payments ± Adjustments**
+
+Every supplier balance must be traceable to individual transactions.
+
+---
+
+# 49. Profit Calculation
+
+For each sale:
+
+**Gross Profit = Selling Revenue − Material Cost**
+
+**Gross Margin % = Gross Profit / Selling Revenue × 100**
+
+Example:
+
+Selling price:
+
+> 321 EGP
+
+Material cost:
+
+> 214 EGP
+
+Gross profit:
+
+> 321 − 214 = **107 EGP**
+
+Gross margin:
+
+> 107 / 321 × 100 = **33.33%**
+
+This is before operating expenses, salaries, rent, utilities, payment fees, etc.
+
+---
+
+# 50. Reporting
+
+## Sales Reports
+
+* Daily sales
+* Monthly sales
+* Sales by date
+* Sales by product type
+* Sales by oil
+* Sales by concentration
+* Sales by bottle size
+* Sales by user
+* Sales by payment method
+* Discounts
+* Average order value
+
+## Inventory Reports
+
+* On-hand inventory
+* Inventory valuation
+* Oil consumption
+* Alcohol consumption
+* Bottle consumption
+* Pump consumption
+* Packaging consumption
+* Finished perfume inventory
+* Low-stock items
+* Inventory adjustments
+* Waste
+* Waste value
+
+## Procurement Reports
+
+* Purchases by supplier
+* Purchases by item
+* Purchase price history
+* Supplier balances
+* Supplier statements
+* Supplier payments
+* Outstanding liabilities
+* Credit-limit warnings
+
+## Customer Reports
+
+* New customers
+* Returning customers
+* Customer purchase history
+* Most purchased oils
+* Most popular concentrations
+* Popular bottle sizes
+* Customer preferences
+
+## Profitability Reports
+
+* Revenue
+* Material cost
+* Gross profit
+* Gross margin
+* Profit by product
+* Profit by oil
+* Profit by bottle size
+* Profit by product classification
+
+---
+
+# 51. Management Dashboard
+
+The main dashboard should provide:
+
+### Sales
+
+* Today's revenue
+* Today's orders
+* Average order value
+* Total discounts
+* Gross profit
+* Gross margin
+
+### Inventory
+
+* Total inventory value
+* Low-stock components
+* Oil consumption
+* Alcohol consumption
+* Packaging consumption
+* Waste value
+
+### Procurement
+
+* Outstanding supplier balance
+* Recent purchases
+* Recent supplier payments
+* Suppliers approaching credit limit
+
+### Customers
+
+* New customers
+* Returning customers
+* Most popular oils
+* Most popular concentrations
+
+---
+
+# 52. Configuration Center
+
+The owner should have a configuration area.
+
+### Pricing
+
+* Global markup %
+
+### Discounts
+
+Example:
+
+* 5%
+* 10%
+* 15%
+
+### Concentrations
+
+* Name
+* Oil %
+* Active/inactive
+
+### Bottles
+
+* Bottle type
+* Size
+* Cost
+* Compatible pump
+
+### Packaging
+
+* Packaging type
+* Cost
+* Inventory unit
+
+### Payment Methods
+
+* Cash
+* Visa
+* Instapay
+
+The application should read these values dynamically rather than hard-coding them.
+
+---
+
+# 53. Suggested Data Model
+
+## Organization
+
+### `outlets`
+
+* id
+* name
+* address
+* phone
+* active
+
+### `users`
+
+* id
+* name
+* email
+* active
+* outlet_id
+
+---
+
+## Customers
+
+### `customers`
+
+* id
+* name
+* mobile
+* gender
+* notes
+* created_at
+* updated_at
+
+### `customer_preferences`
+
+* customer_id
+* favorite_oil_id
+* preferred_concentration_id
+* preferred_bottle_size
+* preferred_packaging_id
+
+---
+
+## Suppliers
+
+### `suppliers`
+
+* id
+* name
+* phone
+* address
+* contact_person
+* credit_terms
+* credit_limit
+* active
+
+---
+
+## Components
+
+### `oils`
+
+* id
+* code
+* name
+* active
+
+### `alcohols`
+
+* id
+* code
+* name
+* active
+
+### `stabilizers`
+
+* id
+* code
+* name
+* active
+
+### `bottles`
+
+* id
+* code
+* design
+* size_ml
+* active
+
+### `pumps`
+
+* id
+* code
+* name
+* active
+
+### `bottle_pump_compatibility`
+
+* bottle_type_id
+* pump_id
+
+### `packaging_items`
+
+* id
+* code
+* name
+* type
+* active
+
+---
+
+# 54. Product Master
+
+### `products`
+
+* id
+* sku
+* name
+* classification
+* brand
+* size_ml
+* barcode
+* active
+
+Classification:
+
+* CUSTOMIZED
+* ORIGINAL
+* HIGH_COPY
+
+Customized products do not need permanent combinations in this table.
+
+---
+
+# 55. Concentration Master
+
+### `concentrations`
+
+* id
+* name
+* oil_percentage
+* active
+
+Example:
+
+| Name   | Oil % |
+| ------ | ----: |
+| EDT    |    15 |
+| EDP    |    20 |
+| Parfum |    30 |
+
+Alcohol percentage can be calculated as the remaining percentage unless a future recipe model requires more complex formulas.
+
+---
+
+# 56. Procurement Data Model
+
+### `purchase_invoices`
+
+* id
+* supplier_id
+* invoice_number
+* invoice_date
+* total_amount
+* status
+* notes
+* created_by
+* created_at
+
+### `purchase_invoice_lines`
+
+* id
+* purchase_invoice_id
+* item_id
+* quantity
+* unit
+* unit_cost
+* line_total
+
+---
+
+# 57. Supplier Ledger
+
+### `supplier_ledger`
+
+* id
+* supplier_id
+* transaction_type
+* reference_id
+* debit
+* credit
+* balance
+* transaction_date
+* created_by
+
+---
+
+# 58. Supplier Payments
+
+### `supplier_payments`
+
+* id
+* supplier_id
+* amount
+* payment_method
+* payment_date
+* reference
+* notes
+* created_by
+
+---
+
+# 59. Sales Data Model
+
+### `sales_orders`
+
+* id
+* order_number
+* customer_id
+* subtotal
+* discount_percentage
+* discount_amount
+* final_amount
+* payment_method
+* payment_reference
+* status
+* created_by
+* created_at
+
+### `sales_order_lines`
+
+* id
+* sales_order_id
+* product_id
+* quantity
+* unit_price
+* line_total
+* line_type
+
+---
+
+# 60. Customized Configuration Data Model
+
+### `customized_configurations`
+
+* id
+* sales_order_line_id
+* oil_id
+* concentration_id
+* bottle_id
+* bottle_size_ml
+* oil_standard_qty_ml
+* oil_actual_qty_ml
+* alcohol_qty_ml
+* stabilizer_id
+* stabilizer_qty_ml
+* pump_id
+* packaging_id
+* customer_supplied_bottle
+* material_cost
+* calculated_price
+* final_price
+
+This table is critical because it preserves the exact recipe used for every customized perfume.
+
+---
+
+# 61. Finished Customized Inventory
+
+### `finished_customized_items`
+
+* id
+* configuration_id
+* original_order_id
+* current_status
+* material_cost
+* created_at
+* returned_at
+* available_for_sale
+
+Status examples:
+
+* SOLD
+* AVAILABLE
+* RETURNED
+* DAMAGED
+* DISPOSED
+
+---
+
+# 62. Inventory Ledger
+
+### `inventory_ledger`
+
+* id
+* item_id
+* movement_type
+* quantity
+* unit
+* unit_cost
+* total_cost
+* reference_type
+* reference_id
+* balance_after
+* created_by
+* created_at
+* reason
+
+This should be the authoritative source for inventory movements.
+
+---
+
+# 63. Return Model
+
+### `returns`
+
+* id
+* original_order_id
+* return_date
+* reason
+* refund_amount
+* user_id
+* status
+
+### `return_lines`
+
+* return_id
+* original_order_line_id
+* quantity
+* disposition
+
+Possible disposition:
+
+* RETURN_TO_FINISHED_STOCK
+* DAMAGED
+* DISPOSED
+
+For customized perfumes, the normal return disposition is:
+
+> `RETURN_TO_FINISHED_STOCK`
+
+---
+
+# 64. Key Business Validations
+
+The system must prevent:
+
+### Invalid recipe
+
+`Oil + Stabilizer + Alcohol > Bottle Size`
+
+### Duplicate customer
+
+Same normalized Egyptian mobile number.
+
+### Negative inventory
+
+Unless a future configuration explicitly enables it.
+
+### Invalid bottle/pump
+
+Pump must be compatible with selected bottle.
+
+### Invalid discount
+
+Discount must exist in the configured discount list.
+
+### Invalid payment
+
+Payment method must be one of the configured methods.
+
+### Invalid purchase
+
+Purchase quantity and unit cost must be greater than zero.
+
+---
+
+# 65. Audit Trail
+
+Important events must store:
+
+* User
+* Date
+* Time
+* Transaction
+* Previous value
+* New value where relevant
+
+Examples:
+
+> User changed markup from 50% → 55%.
+
+> User changed EDP from 20% → 22%.
+
+> User changed oil quantity from 20ml → 25ml.
+
+> User recorded 500ml spillage.
+
+> User processed supplier payment of 20,000 EGP.
+
+This is particularly important because all users initially have full access.
+
+---
+
+# 66. Non-Functional Requirements
+
+### Performance
+
+Normal POS operations should ideally complete within approximately 1–2 seconds.
+
+### Reliability
+
+Sales, inventory, supplier and payment transactions must be transactional.
+
+### Security
+
+* Authentication required.
+* HTTPS in production.
+* Server-side validation.
+* Database constraints.
+* Secure sessions.
+* Pricing calculations must be validated server-side.
+
+### Scalability
+
+Although MVP is one outlet, the architecture should support:
+
+* Multiple outlets
+* Online sales
+* Multiple warehouses
+* Role-based access
+* Accounting integration
+
+later.
+
+---
+
+# 67. Example End-to-End Transaction
+
+## Customer
+
+Ahmed
+
+## Order
+
+One customized perfume.
+
+### Configuration
+
+Bottle:
+
+> 100ml
+
+Oil:
+
+> Oud
+
+Concentration:
+
+> EDP
+
+Standard oil:
+
+> 20ml
+
+Customer asks for stronger perfume.
+
+Actual oil:
+
+> 25ml
+
+Stabilizer:
+
+> 2ml
+
+Alcohol:
+
+> 73ml
+
+Bottle:
+
+> B001
+
+Pump:
+
+> P001 automatically determined
+
+Packaging:
+
+> Gift box
+
+### Costs
+
+Oil:
+
+> 25ml × 5.25 = 131.25 EGP
+
+Alcohol:
+
+> 73ml × 0.80 = 58.40 EGP
+
+Bottle:
+
+> 30 EGP
+
+Pump:
+
+> 5 EGP
+
+Box:
+
+> 10 EGP
+
+Total cost:
+
+> **234.65 EGP**
+
+### Markup
+
+50%
+
+Selling price:
+
+> 234.65 × 1.50
+
+= **351.98 EGP**
+
+### Discount
+
+10%
+
+Discount:
+
+> 35.20 EGP
+
+Final:
+
+> **316.78 EGP**
+
+### Payment
+
+Visa.
+
+### Inventory impact
+
+Oil:
+
+> -25ml
+
+Alcohol:
+
+> -73ml
+
+Bottle:
+
+> -1
+
+Pump:
+
+> -1
+
+Gift box:
+
+> -1
+
+### Customer history
+
+Save the complete configuration under Ahmed's customer profile.
+
+---
+
+# 68. Customer-Supplied Bottle Example
+
+Customer provides a 100ml bottle.
+
+Same configuration:
+
+> 25ml Oil
+> 2ml Stabilizer
+> 73ml Alcohol
+
+The outlet does not consume:
+
+> Bottle = 0
+
+> Pump = 0
+
+Cost becomes:
+
+> 131.25 + 58.40 + 10 box
+
+= **199.65 EGP**
+
+At 50% markup:
+
+> 299.48 EGP
+
+Then any configured order discount is applied.
+
+---
+
+# 69. MVP Acceptance Criteria
+
+The system is ready for MVP when the outlet can:
+
+* Create suppliers.
+* Create components.
+* Create oils.
+* Record supplier relationships.
+* Create bottles.
+* Define bottle sizes.
+* Define bottle/pump relationships.
+* Create packaging.
+* Configure concentrations.
+* Configure markup.
+* Configure discounts.
+* Create customers.
+* Enforce unique Egyptian mobile numbers.
+* Create purchase invoices.
+* Receive multiple items on one purchase invoice.
+* Update inventory after purchase.
+* Calculate weighted-average cost.
+* Update supplier balance.
+* Record supplier payments.
+* Produce supplier statements.
+* Create customized perfume orders.
+* Select concentration.
+* Automatically calculate standard oil quantity.
+* Override oil quantity.
+* Automatically calculate alcohol.
+* Add stabilizer.
+* Automatically recalculate alcohol.
+* Select bottle.
+* Automatically select compatible pump.
+* Select packaging.
+* Support customer-supplied bottles.
+* Calculate component cost.
+* Calculate markup.
+* Apply order-level discount.
+* Accept one payment method.
+* Automatically consume inventory.
+* Store exact perfume configuration.
+* View customer purchase history.
+* Repeat previous configuration.
+* Sell original ready-made perfumes.
+* Sell high-copy ready-made perfumes.
+* Process ready-made returns.
+* Process customized returns.
+* Convert customized returns into finished inventory.
+* Sell returned customized inventory again.
+* Record waste.
+* Record stock adjustments.
+* Calculate gross profit.
+* Display sales dashboards.
+* Display inventory dashboards.
+* Display supplier balances.
+* Display customer history.
+
+---
+
+# 70. Future Roadmap
+
+## Phase 2 — Supply Chain & Process Excellence
+
+* Reorder points
+* Minimum/maximum stock
+* Purchase recommendations
+* Supplier performance
+* Supplier lead time
+* Price trend analysis
+* ABC inventory analysis
+* Dead stock
+* Inventory aging
+* Waste Pareto
+* Stock variance analysis
+
+## Phase 3 — Customer Experience
+
+* Loyalty program
+* Customer recommendations
+* Favorite perfume profiles
+* WhatsApp/SMS notifications
+* QR-based repeat purchase
+* Customer segmentation
+
+## Phase 4 — Online Sales
+
+* E-commerce storefront
+* Online orders
+* Payment gateway
+* Delivery
+* Finished customized inventory allocation
+* Online fulfillment
+
+## Phase 5 — Multi-Branch
+
+* Multiple outlets
+* Branch inventory
+* Inter-branch transfers
+* Branch profitability
+* Central procurement
+* Consolidated supplier balances
+
+## Phase 6 — Advanced Analytics
+
+* Customer Lifetime Value
+* Customer retention
+* Cohort analysis
+* Demand forecasting
+* Inventory optimization
+* Supplier price forecasting
+* Margin optimization
+* Sales mix analysis
+* Waste cost analysis
+* Contribution margin analysis
+
+---
+
+# 71. Final Process Architecture
+
+The complete MVP process is:
+
+```text
+                    ┌─────────────────┐
+                    │    SUPPLIERS    │
+                    └────────┬────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │ PURCHASE INVOICE│
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │    INVENTORY    │
+                    │ Weighted Average │
+                    └────────┬────────┘
+                             │
+             ┌───────────────┴────────────────┐
+             │                                │
+             ▼                                ▼
+    ┌─────────────────┐             ┌──────────────────┐
+    │ CUSTOMIZED SALE │             │ READY-MADE SALE  │
+    └────────┬────────┘             └─────────┬────────┘
+             │                                │
+             ▼                                ▼
+    ┌─────────────────┐             ┌──────────────────┐
+    │ Oil + Alcohol   │             │ Finished Product │
+    │ + Stabilizer    │             │ Inventory        │
+    │ + Bottle        │             └─────────┬────────┘
+    │ + Pump + Box    │                       │
+    └────────┬────────┘                       │
+             │                                │
+             └──────────────┬─────────────────┘
+                            ▼
+                   ┌──────────────────┐
+                   │   SALES ORDER    │
+                   │ Multiple Lines   │
+                   └────────┬─────────┘
+                            │
+                 ┌──────────┴───────────┐
+                 ▼                      ▼
+        ┌─────────────────┐    ┌─────────────────┐
+        │ CUSTOMER / CRM  │    │    PAYMENT      │
+        │ Purchase History│    │ Cash/Visa/      │
+        │ Preferences     │    │ Instapay        │
+        └─────────────────┘    └─────────────────┘
+                            │
+                            ▼
+                   ┌──────────────────┐
+                   │ RETURN / RESALE  │
+                   └────────┬─────────┘
+                            │
+                            ▼
+              ┌─────────────────────────────┐
+              │ FINISHED CUSTOMIZED STOCK   │
+              │ Available for Future /      │
+              │ Online Sales                │
+              └─────────────────────────────┘
+```
+
+## Core principle
+
+The system should maintain **three connected but distinct layers**:
+
+**1. Component Inventory**
+
+> Oil, alcohol, stabilizer, bottles, pumps, boxes.
+
+**2. Finished Inventory**
+
+> Original, high-copy, and returned/customized finished perfumes.
+
+**3. Transaction History**
+
+> Purchases, sales, recipes, consumption, returns, waste, supplier balances, payments, and customer history.
+
+That separation is what will allow the outlet to start simple today while eventually becoming a **multi-channel perfume business with physical and online sales without having to rebuild the inventory and costing engine**.

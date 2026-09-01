@@ -1,0 +1,543 @@
+Recommended navigation
+Dashboard
+│
+├── Sales
+│   ├── New Sale / POS
+│   ├── Sales History
+│   └── Returns
+│
+├── Customers
+│   ├── Customer List
+│   └── Customer Profile
+│
+├── Inventory
+│   ├── Inventory Overview
+│   ├── Inventory Movements
+│   ├── Waste
+│   └── Stock Adjustment / Count
+│
+├── Procurement
+│   ├── Purchase Invoices
+│   └── New Purchase
+│
+├── Suppliers
+│   ├── Supplier List
+│   └── Supplier Statement
+│
+├── Products & Components
+│   ├── Oils
+│   ├── Ready-Made Products
+│   ├── Bottles & Pumps
+│   └── Packaging
+│
+├── Reports
+│   ├── Sales
+│   ├── Inventory
+│   ├── Procurement
+│   ├── Customers
+│   └── Profitability
+│
+└── Settings
+    ├── Concentrations
+    ├── Pricing
+    ├── Discounts
+    ├── Payment Methods
+    └── Users
+1. Dashboard
+
+This should be the management home page.
+
+Today's KPIs
+Sales
+Number of orders
+Average order value
+Discounts
+Gross profit
+Gross margin
+Inventory
+Total inventory value
+Low-stock items
+Today's oil consumption
+Today's waste
+Suppliers
+Total outstanding
+Overdue balances
+Suppliers approaching credit limit
+Customer
+New customers
+Returning customers
+
+And a few charts:
+
+Sales trend
+Sales by product type
+Payment methods
+Top oils
+Top products
+2. New Sale / POS ⭐
+
+This is the most important page in the entire system.
+
+I would make it a single-screen workflow.
+
+┌──────────────────────────────────────────────┐
+│ CUSTOMER                                     │
+│ [ Mobile Number 🔍 ]  Ahmed                  │
+├──────────────────────────────────────────────┤
+│                                              │
+│ [+ CUSTOM PERFUME] [+ READY-MADE]            │
+│                                              │
+│ ┌──────────────────────────────────────────┐ │
+│ │ Oud • EDP • 100ml                        │ │
+│ │ Bottle A • Box                           │ │
+│ │ Qty 1                       350 EGP       │ │
+│ └──────────────────────────────────────────┘ │
+│                                              │
+│ ┌──────────────────────────────────────────┐ │
+│ │ Sauvage • Original • 100ml               │ │
+│ │ Qty 1                    2,000 EGP        │ │
+│ └──────────────────────────────────────────┘ │
+│                                              │
+├──────────────────────────────────────────────┤
+│ Subtotal                         2,350       │
+│ Discount [10% ▼]                  -235       │
+│ TOTAL                            2,115       │
+│                                              │
+│ [ CASH ] [ VISA ] [ INSTAPAY ]              │
+│                                              │
+│             [ COMPLETE SALE ]                │
+└──────────────────────────────────────────────┘
+3. Customized Perfume Builder
+
+This can either be a modal/drawer inside POS or a dedicated full-screen page.
+
+I'd personally use a large modal/drawer so the salesperson never leaves the order.
+
+CUSTOM PERFUME
+
+Oil
+[ Oud ▼ ]
+
+Concentration
+[ EDP ▼ ]
+
+Bottle
+[ Classic Bottle ▼ ]
+
+Size
+[ 100ml ▼ ]
+
+Standard Oil
+20 ml
+
+Actual Oil
+[ 25 ml ]
+
+Stabilizer
+[ + Add ]
+
+Alcohol
+73 ml
+
+Packaging
+[ Gift Box ▼ ]
+
+☐ Customer supplied bottle
+
+────────────────────
+
+Cost             234.65
+Markup              50%
+Suggested Price   351.98
+
+[ ADD TO ORDER ]
+
+The system should immediately show:
+
+Standard: 20ml
+
+and allow:
+
+Actual: 25ml
+
+This is one of the most important UX decisions.
+
+4. Sales History
+
+Search/filter by:
+
+Order number
+Customer
+Mobile
+Date
+User
+Payment method
+Product type
+
+Columns:
+
+Order	Customer	Date	Total	Payment	Status
+10001	Ahmed	26 Aug	350	Cash	Completed
+
+Clicking the order opens the complete transaction.
+
+5. Sale Details
+
+This is an important page for auditability.
+
+For a customized perfume:
+
+ORDER #10001
+
+Customer
+Ahmed
+010XXXXXXXX
+
+────────────────────
+
+CUSTOM PERFUME
+
+Oil: Oud
+Concentration: EDP
+Bottle: Classic
+Size: 100ml
+
+Standard Oil: 20ml
+Actual Oil: 25ml
+
+Stabilizer: 2ml
+Alcohol: 73ml
+
+Pump: P001
+Packaging: Gift Box
+
+────────────────────
+
+Cost: 234.65 EGP
+Selling Price: 351.98 EGP
+Discount: 10%
+Final: 316.78 EGP
+
+Payment: VISA
+
+And importantly:
+
+Inventory consumed
+
+Oud          -25ml
+Alcohol      -73ml
+Stabilizer    -2ml
+Bottle        -1
+Pump          -1
+Gift Box      -1
+6. Returns
+
+A simple workflow:
+
+Search Order
+     ↓
+Select Item
+     ↓
+Return Qty
+     ↓
+Return Reason
+     ↓
+Disposition
+     ↓
+Refund
+
+For customized:
+
+Return to Finished Stock
+
+For ready-made:
+
+Return to Finished Stock
+
+or:
+
+Damaged
+7. Customers
+
+Customer list.
+
+Search primarily by:
+
+Mobile number
+
+Columns:
+
+Name
+Mobile
+Gender
+Orders
+Total Spend
+Last Purchase
+8. Customer Profile ⭐
+
+This should be a strong CRM page.
+
+Ahmed
+010XXXXXXXX
+
+Total Orders: 8
+Total Spend: 4,850 EGP
+Last Purchase: 26 Aug 2026
+
+Then:
+
+Previous Purchases
+26 Aug
+Oud / EDP / 100ml
+25ml oil
+Gift Box
+
+12 Aug
+Oud / EDP / 50ml
+10ml oil
+No Box
+
+Each previous customized perfume should have:
+
+[Repeat Configuration]
+
+This is a very valuable feature for your business.
+
+9. Inventory Overview
+
+This is the main inventory page.
+
+Item	Type	On Hand	Unit	Avg Cost	Value
+Oud	Oil	4,250	ml	5.25	22,312
+Alcohol	Alcohol	18,500	ml	0.80	14,800
+Bottle A	Bottle	85	pcs	30	2,550
+Gift Box	Packaging	42	pcs	10	420
+
+Filters:
+
+Item type
+Low stock
+Active/inactive
+10. Inventory Movements
+
+This page is extremely important for control.
+
+Example:
+
+26 Aug  Sale #10001       Oud       -25ml
+26 Aug  Sale #10001       Alcohol   -73ml
+26 Aug  Purchase #205     Oud      +5L
+26 Aug  Waste #17         Oud     -100ml
+
+Clicking a movement opens its source transaction.
+
+This gives you full traceability.
+
+11. Waste
+
+Very simple operational page.
+
++ Record Waste
+
+Form:
+
+Item
+[ Oud ]
+
+Quantity
+[ 100 ]
+
+Unit
+[ ml ]
+
+Reason
+[ Spillage ▼ ]
+
+Notes
+[ Bottle accidentally dropped... ]
+
+[ SAVE ]
+
+Dashboard:
+
+Waste quantity
+Waste value
+Waste by reason
+Waste by item
+12. Purchase Invoices
+
+List:
+
+Purchase #1001
+Supplier A
+26 Aug
+49,500 EGP
+Posted
+
+Filters:
+
+Supplier
+Date
+Status
+13. New Purchase Invoice
+
+This should feel like an invoice-entry screen.
+
+SUPPLIER
+[ Supplier A ]
+
+Invoice No.
+[ INV-001 ]
+
+Date
+[ 26/08/2026 ]
+
+─────────────────────────────
+
+Item       Qty    Cost      Total
+
+Oud        5 L    5,000     25,000
+Alcohol   20 L    1,000     20,000
+Bottle    100     30         3,000
+
+─────────────────────────────
+
+TOTAL                         48,000
+
+[ POST PURCHASE ]
+
+Posting updates:
+
+Inventory
+Weighted average
+Supplier balance
+14. Suppliers
+
+Supplier list:
+
+Supplier	Balance	Credit Limit	Terms
+Supplier A	75,000	100,000	30 days
+
+Click supplier → Supplier Profile.
+
+15. Supplier Profile / Statement ⭐
+
+This should look like an account statement.
+
+SUPPLIER A
+
+Opening Balance       20,000
+
+Purchase #1001        +50,000
+Payment #501          -20,000
+Purchase #1020        +15,000
+
+──────────────────────
+
+Current Balance       65,000
+
+Buttons:
+
+[ Record Payment ]
+
+[ Export Statement ]
+
+16. Products & Components
+
+Rather than making the sidebar extremely long, I would make one Product & Components area with tabs.
+
+Products & Components
+
+[ Oils ] [ Alcohol ] [ Stabilizers ]
+[ Bottles ] [ Pumps ] [ Packaging ]
+[ Ready-Made ]
+
+Each tab has its own CRUD.
+
+17. Reports
+
+I'd create one reporting hub.
+
+Reports
+
+┌─────────────────────┐
+│ Sales               │
+├─────────────────────┤
+│ Inventory           │
+├─────────────────────┤
+│ Procurement         │
+├─────────────────────┤
+│ Suppliers           │
+├─────────────────────┤
+│ Customers           │
+├─────────────────────┤
+│ Profitability       │
+└─────────────────────┘
+
+Then each report gets filters.
+
+18. Settings
+
+This is where your business rules live.
+
+Concentrations
+EDT       15%
+EDP       20%
+Parfum    30%
+Pricing
+Global Markup
+[ 50% ]
+Discounts
+☑ 5%
+☑ 10%
+☑ 15%
+Payment Methods
+☑ Cash
+☑ Visa
+☑ Instapay
+Bottle/Pump
+Bottle A → Pump A
+Bottle B → Pump B
+My recommended MVP navigation
+
+I would actually simplify the sidebar to this:
+
+🏠 Dashboard
+
+🛒 Sales
+   ├── New Sale
+   ├── Sales History
+   └── Returns
+
+👥 Customers
+
+📦 Inventory
+   ├── Overview
+   ├── Movements
+   ├── Waste
+   └── Adjustments
+
+🚚 Procurement
+   ├── Purchase Invoices
+   └── New Purchase
+
+🏢 Suppliers
+
+🧴 Products & Components
+
+📊 Reports
+
+⚙️ Settings
+And I would make New Sale visually prominent.
+
+Because operationally, your system has two very different user experiences:
+
+Salesperson:
+
+Customer → Build Perfume → Price → Discount → Payment → Done
+
+Owner/Manager:
+
+Dashboard → Procurement → Inventory → Suppliers → Reports → Settings
+
+That separation will make the system much easier to use than trying to make every feature equally prominent.

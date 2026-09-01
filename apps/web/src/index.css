@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --ink: #1c1917;
+  --ink-hover: #292524;
+  --gold: #b0894a;
+  --gold-light: #d4b483;
+  --paper: #f7f3ee;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+html.locale-ar body {
+  font-family: Cairo, "DM Sans", sans-serif;
+}
+
+html.locale-ar .font-serif {
+  font-family: Cairo, Fraunces, serif;
+}
+
+input, select, textarea, button {
+  font-family: inherit;
+}
+
+th {
+  text-align: start;
+}
+
+.bg-ink {
+  background-color: var(--ink) !important;
+}
+.hover\:bg-ink-hover:hover {
+  background-color: var(--ink-hover) !important;
+}
+.text-ink {
+  color: var(--ink) !important;
+}
+.border-ink {
+  border-color: var(--ink) !important;
+}
+.bg-paper {
+  background-color: var(--paper) !important;
+}
+.hover\:bg-paper:hover {
+  background-color: var(--paper) !important;
+}
+.bg-gold {
+  background-color: var(--gold) !important;
+}
+.text-gold {
+  color: var(--gold) !important;
+}
+.text-gold-light {
+  color: var(--gold-light) !important;
+}
+.border-gold {
+  border-color: var(--gold) !important;
+}
+.hover\:border-gold:hover {
+  border-color: var(--gold) !important;
+}
+.bg-gold\/20 {
+  background-color: color-mix(in srgb, var(--gold) 20%, transparent) !important;
+}
+.hover\:bg-gold\/30:hover {
+  background-color: color-mix(in srgb, var(--gold) 30%, transparent) !important;
+}

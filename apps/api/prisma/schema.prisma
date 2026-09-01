@@ -1,0 +1,983 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  PLATFORM_ADMIN
+  OWNER
+  STAFF
+}
+
+enum AuthTokenType {
+  PASSWORD_RESET
+  MAGIC_LINK
+  EMAIL_VERIFICATION
+}
+
+enum ItemType {
+  OIL
+  ALCOHOL
+  STABILIZER
+  BOTTLE
+  PUMP
+  PACKAGING
+  READY_MADE
+  FINISHED_CUSTOMIZED
+}
+
+enum ProductClassification {
+  CUSTOMIZED
+  ORIGINAL
+  HIGH_COPY
+}
+
+enum MovementType {
+  OPENING_BALANCE
+  PURCHASE_RECEIPT
+  CUSTOMIZED_SALE_CONSUMPTION
+  READY_MADE_SALE
+  FINISHED_CUSTOMIZED_SALE
+  RETURN
+  WASTE
+  DAMAGE
+  SPILLAGE
+  STOCK_ADJUSTMENT
+  STOCK_COUNT_ADJUSTMENT
+}
+
+enum PurchaseStatus {
+  DRAFT
+  POSTED
+}
+
+enum SalesStatus {
+  COMPLETED
+  RETURNED
+  PARTIALLY_RETURNED
+}
+
+enum LineType {
+  CUSTOMIZED
+  ORIGINAL
+  HIGH_COPY
+  FINISHED_CUSTOMIZED
+}
+
+enum SupplierLedgerType {
+  OPENING_BALANCE
+  PURCHASE_INVOICE
+  PAYMENT
+  ADJUSTMENT
+}
+
+enum ReturnDisposition {
+  RETURN_TO_FINISHED_STOCK
+  DAMAGED
+  DISPOSED
+}
+
+enum FinishedCustomizedStatus {
+  SOLD
+  AVAILABLE
+  RETURNED
+  DAMAGED
+  DISPOSED
+}
+
+enum WasteReason {
+  SPILLAGE
+  DAMAGE
+  WRONG_MIX
+  OTHER
+}
+
+enum Unit {
+  ML
+  L
+  PCS
+}
+
+enum PackagingType {
+  STANDARD_BOX
+  PREMIUM_BOX
+  GIFT_WRAPPING
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum SequenceType {
+  SALE
+  PURCHASE
+  RETURN
+  WASTE
+  ADJUSTMENT
+  PAYMENT
+}
+
+enum SupplierPaymentMethod {
+  CASH
+  BANK_TRANSFER
+}
+
+model Tenant {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  status    TenantStatus @default(ACTIVE)
+  currency  String       @default("EGP")
+  timezone  String       @default("Africa/Cairo")
+  locale    String       @default("en-EG")
+  country   String       @default("EG")
+  theme     String       @default("gold")
+  notes     String?
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  outlets              Outlet[]
+  users                User[]
+  sequences            TenantSequence[]
+  inventoryItems       InventoryItem[]
+  oils                 Oil[]
+  alcohols             Alcohol[]
+  stabilizers          Stabilizer[]
+  bottles              Bottle[]
+  pumps                Pump[]
+  packagingItems       PackagingItem[]
+  products             Product[]
+  concentrations       Concentration[]
+  pricingConfig        PricingConfiguration?
+  discounts            DiscountConfiguration[]
+  paymentMethods       PaymentMethod[]
+  customers            Customer[]
+  suppliers            Supplier[]
+  purchaseInvoices     PurchaseInvoice[]
+  supplierLedger       SupplierLedger[]
+  supplierPayments     SupplierPayment[]
+  inventoryBalances    InventoryBalance[]
+  inventoryMovements   InventoryMovement[]
+  salesOrders          SalesOrder[]
+  returns              Return[]
+  wasteTransactions    WasteTransaction[]
+  stockAdjustments     StockAdjustment[]
+  finishedCustomized   FinishedCustomizedItem[]
+  auditLogs            AuditLog[]
+  devices              Device[]
+  licenseIssues        LicenseIssue[]
+  syncMutations        SyncMutation[]
+
+  @@map("tenants")
+}
+
+model Outlet {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  address   String?
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant             Tenant                   @relation(fields: [tenantId], references: [id])
+  userOutlets        UserOutlet[]
+  sequences          TenantSequence[]
+  inventoryBalances  InventoryBalance[]
+  inventoryMovements InventoryMovement[]
+  purchaseInvoices   PurchaseInvoice[]
+  supplierPayments   SupplierPayment[]
+  salesOrders        SalesOrder[]
+  returns            Return[]
+  wasteTransactions  WasteTransaction[]
+  stockAdjustments   StockAdjustment[]
+  finishedCustomized FinishedCustomizedItem[]
+
+  @@index([tenantId])
+  @@map("outlets")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  supabaseUserId String?   @unique @map("supabase_user_id")
+  tenantId       String?   @map("tenant_id")
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  displayName    String    @map("display_name")
+  role           UserRole
+  active         Boolean   @default(true)
+  staffPages     String[]  @default(["dashboard", "suppliers"]) @map("staff_pages")
+  seeItemCost    Boolean   @default(true) @map("see_item_cost")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  tenant             Tenant?            @relation(fields: [tenantId], references: [id])
+  outlets            UserOutlet[]
+  createdPurchases   PurchaseInvoice[]  @relation("PurchaseCreatedBy")
+  createdPayments    SupplierPayment[]  @relation("PaymentCreatedBy")
+  createdSales       SalesOrder[]       @relation("SaleCreatedBy")
+  createdReturns     Return[]           @relation("ReturnCreatedBy")
+  createdWaste       WasteTransaction[] @relation("WasteCreatedBy")
+  createdAdjustments StockAdjustment[]  @relation("AdjustmentCreatedBy")
+  auditLogs          AuditLog[]
+  deviceUsers        DeviceUser[]
+  authSessions       AuthSession[]
+  authOneTimeTokens  AuthOneTimeToken[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model AuthSession {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  revokedAt  DateTime? @map("revoked_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  ipAddress  String?   @map("ip_address")
+  userAgent  String?   @map("user_agent")
+  deviceId   String?   @map("device_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model AuthOneTimeToken {
+  id         String        @id @default(cuid())
+  userId     String        @map("user_id")
+  type       AuthTokenType
+  tokenHash  String        @unique @map("token_hash")
+  expiresAt  DateTime      @map("expires_at")
+  consumedAt DateTime?     @map("consumed_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+  @@map("auth_one_time_tokens")
+}
+
+model UserOutlet {
+  userId   String @map("user_id")
+  outletId String @map("outlet_id")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outlet Outlet @relation(fields: [outletId], references: [id], onDelete: Cascade)
+
+  @@id([userId, outletId])
+  @@map("user_outlets")
+}
+
+model Device {
+  id                   String    @id
+  tenantId             String    @map("tenant_id")
+  label                String?
+  lastSeenAt           DateTime  @default(now()) @map("last_seen_at")
+  lastLicenseExpiresAt DateTime? @map("last_license_expires_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  users         DeviceUser[]
+  licenseIssues LicenseIssue[]
+  syncMutations SyncMutation[]
+
+  @@index([tenantId])
+  @@map("devices")
+}
+
+model DeviceUser {
+  deviceId    String   @map("device_id")
+  userId      String   @map("user_id")
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([deviceId, userId])
+  @@index([userId])
+  @@map("device_users")
+}
+
+model LicenseIssue {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  deviceId  String   @map("device_id")
+  issuedAt  DateTime @default(now()) @map("issued_at")
+  expiresAt DateTime @map("expires_at")
+  payload   Json
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, deviceId])
+  @@map("license_issues")
+}
+
+model SyncMutation {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  deviceId  String   @map("device_id")
+  localId   String   @map("local_id")
+  type      String
+  status    String
+  error     String?
+  serverId  String?  @map("server_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, deviceId, localId])
+  @@index([tenantId, createdAt])
+  @@map("sync_mutations")
+}
+
+model TenantSequence {
+  id         String       @id @default(cuid())
+  tenantId   String       @map("tenant_id")
+  outletId   String       @map("outlet_id")
+  type       SequenceType
+  nextNumber Int          @default(1) @map("next_number")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  outlet Outlet @relation(fields: [outletId], references: [id])
+
+  @@unique([outletId, type])
+  @@map("tenant_sequences")
+}
+
+model InventoryItem {
+  id                 String   @id @default(cuid())
+  tenantId           String   @map("tenant_id")
+  code               String
+  name               String
+  itemType           ItemType @map("item_type")
+  purchaseUnit       Unit     @default(PCS) @map("purchase_unit")
+  stockUnit          Unit     @default(PCS) @map("stock_unit")
+  lowStockThreshold  Decimal  @default(0) @map("low_stock_threshold") @db.Decimal(18, 4)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  tenant             Tenant                   @relation(fields: [tenantId], references: [id])
+  oil                Oil?
+  alcohol            Alcohol?
+  stabilizer         Stabilizer?
+  bottle             Bottle?
+  pump               Pump?
+  packaging          PackagingItem?
+  product            Product?
+  balances           InventoryBalance[]
+  movements          InventoryMovement[]
+  purchaseLines      PurchaseInvoiceLine[]
+  waste              WasteTransaction[]
+  adjustments        StockAdjustment[]
+  finishedCustomized FinishedCustomizedItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, itemType])
+  @@map("inventory_items")
+}
+
+model InventoryBalance {
+  id             String  @id @default(cuid())
+  tenantId       String  @map("tenant_id")
+  outletId       String  @map("outlet_id")
+  itemId         String  @map("item_id")
+  quantityOnHand Decimal @default(0) @map("quantity_on_hand") @db.Decimal(18, 4)
+  averageCost    Decimal @default(0) @map("average_cost") @db.Decimal(18, 6)
+  inventoryValue Decimal @default(0) @map("inventory_value") @db.Decimal(18, 4)
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  outlet Outlet        @relation(fields: [outletId], references: [id])
+  item   InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@unique([outletId, itemId])
+  @@index([tenantId])
+  @@map("inventory_balances")
+}
+
+model InventoryMovement {
+  id            String       @id @default(cuid())
+  tenantId      String       @map("tenant_id")
+  outletId      String       @map("outlet_id")
+  itemId        String       @map("item_id")
+  movementType  MovementType @map("movement_type")
+  quantity      Decimal      @db.Decimal(18, 4)
+  unit          Unit
+  unitCost      Decimal      @map("unit_cost") @db.Decimal(18, 6)
+  totalCost     Decimal      @map("total_cost") @db.Decimal(18, 4)
+  referenceType String       @map("reference_type")
+  referenceId   String       @map("reference_id")
+  balanceAfter  Decimal      @map("balance_after") @db.Decimal(18, 4)
+  reason        String?
+  createdById   String       @map("created_by")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  outlet Outlet        @relation(fields: [outletId], references: [id])
+  item   InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@index([tenantId, outletId, createdAt])
+  @@index([itemId, createdAt])
+  @@index([referenceType, referenceId])
+  @@map("inventory_movements")
+}
+
+model Oil {
+  id               String   @id @default(cuid())
+  tenantId         String   @map("tenant_id")
+  inventoryItemId  String   @unique @map("inventory_item_id")
+  code             String
+  name             String
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id])
+  inventoryItem InventoryItem           @relation(fields: [inventoryItemId], references: [id])
+  configurations CustomizedConfiguration[]
+  preferences   CustomerPreference[]
+
+  @@unique([tenantId, code])
+  @@map("oils")
+}
+
+model Alcohol {
+  id              String  @id @default(cuid())
+  tenantId        String  @map("tenant_id")
+  inventoryItemId String  @unique @map("inventory_item_id")
+  code            String
+  name            String
+  active          Boolean @default(true)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@unique([tenantId, code])
+  @@map("alcohols")
+}
+
+model Stabilizer {
+  id              String  @id @default(cuid())
+  tenantId        String  @map("tenant_id")
+  inventoryItemId String  @unique @map("inventory_item_id")
+  code            String
+  name            String
+  active          Boolean @default(true)
+
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id])
+  inventoryItem  InventoryItem             @relation(fields: [inventoryItemId], references: [id])
+  configurations CustomizedConfiguration[]
+
+  @@unique([tenantId, code])
+  @@map("stabilizers")
+}
+
+model Pump {
+  id              String  @id @default(cuid())
+  tenantId        String  @map("tenant_id")
+  inventoryItemId String  @unique @map("inventory_item_id")
+  code            String
+  name            String
+  active          Boolean @default(true)
+
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id])
+  inventoryItem  InventoryItem             @relation(fields: [inventoryItemId], references: [id])
+  bottles        Bottle[]
+  configurations CustomizedConfiguration[]
+
+  @@unique([tenantId, code])
+  @@map("pumps")
+}
+
+model Bottle {
+  id              String  @id @default(cuid())
+  tenantId        String  @map("tenant_id")
+  inventoryItemId String  @unique @map("inventory_item_id")
+  code            String
+  design          String
+  sizeMl          Int     @map("size_ml")
+  pumpId          String? @map("pump_id")
+  imageUrl        String? @map("image_url")
+  active          Boolean @default(true)
+
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id])
+  inventoryItem  InventoryItem             @relation(fields: [inventoryItemId], references: [id])
+  pump           Pump?                     @relation(fields: [pumpId], references: [id])
+  configurations CustomizedConfiguration[]
+
+  @@unique([tenantId, code])
+  @@map("bottles")
+}
+
+model PackagingItem {
+  id              String        @id @default(cuid())
+  tenantId        String        @map("tenant_id")
+  inventoryItemId String        @unique @map("inventory_item_id")
+  code            String
+  name            String
+  type            PackagingType
+  active          Boolean       @default(true)
+
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id])
+  inventoryItem  InventoryItem             @relation(fields: [inventoryItemId], references: [id])
+  configurations CustomizedConfiguration[]
+  preferences    CustomerPreference[]
+
+  @@unique([tenantId, code])
+  @@map("packaging_items")
+}
+
+model Product {
+  id              String                 @id @default(cuid())
+  tenantId        String                 @map("tenant_id")
+  inventoryItemId String                 @unique @map("inventory_item_id")
+  sku             String
+  name            String
+  classification  ProductClassification
+  brand           String?
+  sizeMl          Int                    @map("size_ml")
+  barcode         String?
+  sellingPrice    Decimal                @map("selling_price") @db.Decimal(18, 4)
+  active          Boolean                @default(true)
+
+  tenant        Tenant            @relation(fields: [tenantId], references: [id])
+  inventoryItem InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+  salesLines    SalesOrderLine[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, barcode])
+  @@map("products")
+}
+
+model Concentration {
+  id            String  @id @default(cuid())
+  tenantId      String  @map("tenant_id")
+  name          String
+  oilPercentage Decimal @map("oil_percentage") @db.Decimal(6, 2)
+  active        Boolean @default(true)
+
+  tenant         Tenant                    @relation(fields: [tenantId], references: [id])
+  configurations CustomizedConfiguration[]
+  preferences    CustomerPreference[]
+
+  @@unique([tenantId, name])
+  @@map("concentrations")
+}
+
+model PricingConfiguration {
+  id               String   @id @default(cuid())
+  tenantId         String   @unique @map("tenant_id")
+  markupPercentage Decimal  @map("markup_percentage") @db.Decimal(8, 4)
+  effectiveFrom    DateTime @default(now()) @map("effective_from")
+  active           Boolean  @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("pricing_configurations")
+}
+
+model DiscountConfiguration {
+  id         String  @id @default(cuid())
+  tenantId   String  @map("tenant_id")
+  name       String
+  percentage Decimal @db.Decimal(6, 2)
+  active     Boolean @default(true)
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  orders SalesOrder[]
+
+  @@unique([tenantId, percentage])
+  @@map("discount_configurations")
+}
+
+model PaymentMethod {
+  id     String  @id @default(cuid())
+  tenantId String @map("tenant_id")
+  name   String
+  code   String
+  active Boolean @default(true)
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  orders SalesOrder[]
+
+  @@unique([tenantId, code])
+  @@map("payment_methods")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  mobile    String
+  gender    Gender?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id])
+  preference  CustomerPreference?
+  salesOrders SalesOrder[]
+
+  @@unique([tenantId, mobile])
+  @@index([tenantId, name])
+  @@map("customers")
+}
+
+model CustomerPreference {
+  id                      String @id @default(cuid())
+  customerId              String @unique @map("customer_id")
+  favoriteOilId           String? @map("favorite_oil_id")
+  preferredConcentrationId String? @map("preferred_concentration_id")
+  preferredBottleSize     Int?    @map("preferred_bottle_size")
+  preferredPackagingId    String? @map("preferred_packaging_id")
+
+  customer       Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  favoriteOil    Oil?           @relation(fields: [favoriteOilId], references: [id])
+  concentration  Concentration? @relation(fields: [preferredConcentrationId], references: [id])
+  packaging      PackagingItem? @relation(fields: [preferredPackagingId], references: [id])
+
+  @@map("customer_preferences")
+}
+
+model Supplier {
+  id             String      @id @default(cuid())
+  tenantId       String      @map("tenant_id")
+  name           String
+  phone          String?
+  address        String?
+  contactPerson  String?     @map("contact_person")
+  creditTerms    String      @default("") @map("credit_terms")
+  creditLimit    Decimal?    @map("credit_limit") @db.Decimal(18, 4)
+  notes          String?
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id])
+  invoices PurchaseInvoice[]
+  ledger   SupplierLedger[]
+  payments SupplierPayment[]
+
+  @@index([tenantId, name])
+  @@map("suppliers")
+}
+
+model PurchaseInvoice {
+  id            String         @id @default(cuid())
+  tenantId      String         @map("tenant_id")
+  outletId      String         @map("outlet_id")
+  supplierId    String         @map("supplier_id")
+  number        String
+  invoiceNumber String         @map("invoice_number")
+  invoiceDate   DateTime       @map("invoice_date")
+  postingDate   DateTime?      @map("posting_date")
+  totalAmount   Decimal        @default(0) @map("total_amount") @db.Decimal(18, 4)
+  status        PurchaseStatus @default(DRAFT)
+  notes         String?
+  createdById   String         @map("created_by")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id])
+  outlet    Outlet                 @relation(fields: [outletId], references: [id])
+  supplier  Supplier               @relation(fields: [supplierId], references: [id])
+  createdBy User                   @relation("PurchaseCreatedBy", fields: [createdById], references: [id])
+  lines     PurchaseInvoiceLine[]
+  ledger    SupplierLedger[]
+
+  @@unique([outletId, number])
+  @@index([tenantId, supplierId])
+  @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceLine {
+  id                String  @id @default(cuid())
+  purchaseInvoiceId String  @map("purchase_invoice_id")
+  itemId            String  @map("item_id")
+  quantity          Decimal @db.Decimal(18, 4)
+  unit              Unit
+  unitCost          Decimal @map("unit_cost") @db.Decimal(18, 6)
+  lineTotal         Decimal @map("line_total") @db.Decimal(18, 4)
+  stockQuantity     Decimal @map("stock_quantity") @db.Decimal(18, 4)
+  stockUnitCost     Decimal @map("stock_unit_cost") @db.Decimal(18, 6)
+
+  invoice PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+  item    InventoryItem   @relation(fields: [itemId], references: [id])
+
+  @@map("purchase_invoice_lines")
+}
+
+model SupplierLedger {
+  id              String             @id @default(cuid())
+  tenantId        String             @map("tenant_id")
+  supplierId      String             @map("supplier_id")
+  transactionType SupplierLedgerType @map("transaction_type")
+  referenceId     String?            @map("reference_id")
+  debit           Decimal            @default(0) @db.Decimal(18, 4)
+  credit          Decimal            @default(0) @db.Decimal(18, 4)
+  balance         Decimal            @db.Decimal(18, 4)
+  transactionDate DateTime           @map("transaction_date")
+  createdById     String             @map("created_by")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  purchaseId      String?            @map("purchase_id")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  supplier Supplier         @relation(fields: [supplierId], references: [id])
+  purchase PurchaseInvoice? @relation(fields: [purchaseId], references: [id])
+
+  @@index([supplierId, transactionDate])
+  @@map("supplier_ledger")
+}
+
+model SupplierPayment {
+  id            String                @id @default(cuid())
+  tenantId      String                @map("tenant_id")
+  outletId      String                @map("outlet_id")
+  supplierId    String                @map("supplier_id")
+  number        String
+  amount        Decimal               @db.Decimal(18, 4)
+  paymentMethod SupplierPaymentMethod @map("payment_method")
+  paymentDate   DateTime              @map("payment_date")
+  reference     String?
+  notes         String?
+  createdById   String                @map("created_by")
+  createdAt     DateTime              @default(now()) @map("created_at")
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  outlet    Outlet   @relation(fields: [outletId], references: [id])
+  supplier  Supplier @relation(fields: [supplierId], references: [id])
+  createdBy User     @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([outletId, number])
+  @@map("supplier_payments")
+}
+
+model SalesOrder {
+  id                 String    @id @default(cuid())
+  tenantId           String    @map("tenant_id")
+  outletId           String    @map("outlet_id")
+  customerId         String    @map("customer_id")
+  orderNumber        String    @map("order_number")
+  subtotal           Decimal   @db.Decimal(18, 4)
+  discountId         String?   @map("discount_id")
+  discountPercentage Decimal   @default(0) @map("discount_percentage") @db.Decimal(6, 2)
+  discountAmount     Decimal   @default(0) @map("discount_amount") @db.Decimal(18, 4)
+  finalAmount        Decimal   @map("final_amount") @db.Decimal(18, 4)
+  materialCost       Decimal   @map("material_cost") @db.Decimal(18, 4)
+  grossProfit        Decimal   @map("gross_profit") @db.Decimal(18, 4)
+  paymentMethodId    String    @map("payment_method_id")
+  paymentReference   String?   @map("payment_reference")
+  status             SalesStatus @default(COMPLETED)
+  createdById        String    @map("created_by")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  outlet        Outlet          @relation(fields: [outletId], references: [id])
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  discount      DiscountConfiguration? @relation(fields: [discountId], references: [id])
+  paymentMethod PaymentMethod   @relation(fields: [paymentMethodId], references: [id])
+  createdBy     User            @relation("SaleCreatedBy", fields: [createdById], references: [id])
+  lines         SalesOrderLine[]
+  returns       Return[]
+
+  @@unique([outletId, orderNumber])
+  @@index([tenantId, createdAt])
+  @@index([customerId])
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id              String   @id @default(cuid())
+  salesOrderId    String   @map("sales_order_id")
+  lineType        LineType @map("line_type")
+  productId       String?  @map("product_id")
+  finishedItemId  String?  @map("finished_item_id")
+  quantity        Int
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(18, 4)
+  lineTotal       Decimal  @map("line_total") @db.Decimal(18, 4)
+  costAtSale      Decimal  @map("cost_at_sale") @db.Decimal(18, 4)
+  returnedQty     Int      @default(0) @map("returned_qty")
+
+  order         SalesOrder               @relation(fields: [salesOrderId], references: [id])
+  product       Product?                 @relation(fields: [productId], references: [id])
+  finishedItem  FinishedCustomizedItem?  @relation("SoldFinishedItem", fields: [finishedItemId], references: [id])
+  configuration CustomizedConfiguration?
+  returnLines   ReturnLine[]
+
+  @@map("sales_order_lines")
+}
+
+model CustomizedConfiguration {
+  id                      String  @id @default(cuid())
+  salesOrderLineId        String  @unique @map("sales_order_line_id")
+  oilId                   String  @map("oil_id")
+  concentrationId         String  @map("concentration_id")
+  bottleId                String  @map("bottle_id")
+  bottleSizeMl            Int     @map("bottle_size_ml")
+  oilStandardQtyMl        Decimal @map("oil_standard_qty_ml") @db.Decimal(18, 4)
+  oilActualQtyMl          Decimal @map("oil_actual_qty_ml") @db.Decimal(18, 4)
+  alcoholQtyMl            Decimal @map("alcohol_qty_ml") @db.Decimal(18, 4)
+  stabilizerId            String? @map("stabilizer_id")
+  stabilizerQtyMl         Decimal @default(0) @map("stabilizer_qty_ml") @db.Decimal(18, 4)
+  pumpId                  String? @map("pump_id")
+  packagingId             String? @map("packaging_id")
+  customerSuppliedBottle  Boolean @default(false) @map("customer_supplied_bottle")
+  materialCost            Decimal @map("material_cost") @db.Decimal(18, 4)
+  calculatedPrice         Decimal @map("calculated_price") @db.Decimal(18, 4)
+  finalPrice              Decimal @map("final_price") @db.Decimal(18, 4)
+
+  line         SalesOrderLine           @relation(fields: [salesOrderLineId], references: [id])
+  oil          Oil                      @relation(fields: [oilId], references: [id])
+  concentration Concentration           @relation(fields: [concentrationId], references: [id])
+  bottle       Bottle                   @relation(fields: [bottleId], references: [id])
+  stabilizer   Stabilizer?              @relation(fields: [stabilizerId], references: [id])
+  pump         Pump?                    @relation(fields: [pumpId], references: [id])
+  packaging    PackagingItem?           @relation(fields: [packagingId], references: [id])
+  finishedItem FinishedCustomizedItem?
+
+  @@map("customized_configurations")
+}
+
+model FinishedCustomizedItem {
+  id               String                   @id @default(cuid())
+  tenantId         String                   @map("tenant_id")
+  outletId         String                   @map("outlet_id")
+  inventoryItemId  String                   @map("inventory_item_id")
+  configurationId  String                   @unique @map("configuration_id")
+  originalOrderId  String                   @map("original_order_id")
+  status           FinishedCustomizedStatus @default(AVAILABLE)
+  materialCost     Decimal                  @map("material_cost") @db.Decimal(18, 4)
+  sellingPrice     Decimal                  @map("selling_price") @db.Decimal(18, 4)
+  availableForSale Boolean                  @default(true) @map("available_for_sale")
+  createdAt        DateTime                 @default(now()) @map("created_at")
+  returnedAt       DateTime?                @map("returned_at")
+
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id])
+  outlet        Outlet                   @relation(fields: [outletId], references: [id])
+  inventoryItem InventoryItem            @relation(fields: [inventoryItemId], references: [id])
+  configuration CustomizedConfiguration  @relation(fields: [configurationId], references: [id])
+  soldLines     SalesOrderLine[]         @relation("SoldFinishedItem")
+
+  @@index([tenantId, outletId, status])
+  @@map("finished_customized_items")
+}
+
+model Return {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+  outletId        String   @map("outlet_id")
+  originalOrderId String   @map("original_order_id")
+  number          String
+  returnDate      DateTime @default(now()) @map("return_date")
+  reason          String
+  refundAmount    Decimal  @map("refund_amount") @db.Decimal(18, 4)
+  createdById     String   @map("created_by")
+  status          String   @default("COMPLETED")
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  outlet        Outlet       @relation(fields: [outletId], references: [id])
+  originalOrder SalesOrder   @relation(fields: [originalOrderId], references: [id])
+  createdBy     User         @relation("ReturnCreatedBy", fields: [createdById], references: [id])
+  lines         ReturnLine[]
+
+  @@unique([outletId, number])
+  @@map("returns")
+}
+
+model ReturnLine {
+  id                   String             @id @default(cuid())
+  returnId             String             @map("return_id")
+  originalOrderLineId  String             @map("original_order_line_id")
+  quantity             Int
+  disposition          ReturnDisposition
+  refundAmount         Decimal            @map("refund_amount") @db.Decimal(18, 4)
+
+  returnTxn Return         @relation(fields: [returnId], references: [id])
+  orderLine SalesOrderLine @relation(fields: [originalOrderLineId], references: [id])
+
+  @@map("return_lines")
+}
+
+model WasteTransaction {
+  id          String      @id @default(cuid())
+  tenantId    String      @map("tenant_id")
+  outletId    String      @map("outlet_id")
+  itemId      String      @map("item_id")
+  number      String
+  quantity    Decimal     @db.Decimal(18, 4)
+  unit        Unit
+  reason      WasteReason
+  notes       String?
+  totalCost   Decimal     @map("total_cost") @db.Decimal(18, 4)
+  createdById String      @map("created_by")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  outlet    Outlet        @relation(fields: [outletId], references: [id])
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  createdBy User          @relation("WasteCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([outletId, number])
+  @@map("waste_transactions")
+}
+
+model StockAdjustment {
+  id               String   @id @default(cuid())
+  tenantId         String   @map("tenant_id")
+  outletId         String   @map("outlet_id")
+  itemId           String   @map("item_id")
+  number           String
+  quantity         Decimal  @db.Decimal(18, 4)
+  unit             Unit
+  reason           String
+  notes            String?
+  isOpeningBalance Boolean  @default(false) @map("is_opening_balance")
+  isStockCount     Boolean  @default(false) @map("is_stock_count")
+  createdById      String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  outlet    Outlet        @relation(fields: [outletId], references: [id])
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  createdBy User          @relation("AdjustmentCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([outletId, number])
+  @@map("stock_adjustments")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?  @map("tenant_id")
+  userId    String   @map("user_id")
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}

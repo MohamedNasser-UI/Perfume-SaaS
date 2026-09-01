@@ -1,0 +1,1047 @@
+1. Recommended Architecture
+
+I recommend:
+
+                    ┌──────────────────────┐
+                    │   Web POS / Admin    │
+                    │   React + TypeScript │
+                    └──────────┬───────────┘
+                               │ HTTPS
+                               ▼
+                    ┌──────────────────────┐
+                    │      Backend API      │
+                    │ Node.js + TypeScript │
+                    │       + NestJS        │
+                    └──────────┬───────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              │                │                │
+              ▼                ▼                ▼
+        ┌──────────┐     ┌───────────┐   ┌───────────┐
+        │PostgreSQL│     │   Redis   │   │   Files   │
+        │ Database │     │ optional  │   │ Storage   │
+        └──────────┘     └───────────┘   └───────────┘
+
+For your case, I would use:
+
+Layer	Technology
+Frontend	React + TypeScript + Vite
+UI	Tailwind CSS + shadcn/ui
+Backend	Node.js + TypeScript + NestJS
+Database	PostgreSQL
+ORM	Prisma
+Authentication	Supabase Auth or managed authentication
+Storage	Supabase Storage / S3-compatible storage
+API	REST
+Validation	Zod / class-validator
+Deployment	Docker
+Reverse Proxy	Nginx
+OS	Ubuntu
+Version Control	Git + GitHub
+CI/CD	GitHub Actions
+Monitoring	Uptime + application logs + server monitoring
+2. Why TypeScript End-to-End?
+
+I recommend TypeScript for both frontend and backend.
+
+Instead of:
+
+React
+   +
+Python/FastAPI
+
+I'd use:
+
+React + TypeScript
+        ↓
+Node.js + TypeScript
+        ↓
+PostgreSQL
+
+The reason is not that Python is bad. FastAPI would work very well.
+
+But this particular application is primarily:
+
+POS
+CRUD
+transactional processing
+inventory
+costing
+procurement
+CRM
+reporting
+
+It isn't an AI/data-science application.
+
+Using TypeScript across the stack gives you:
+
+One language
+Shared types
+Easier development
+Easier maintenance
+Strong validation
+Easier onboarding of developers
+Excellent React ecosystem
+Excellent backend ecosystem
+3. Frontend
+React + TypeScript + Vite
+
+This is what I recommend for the web application.
+
+Structure:
+
+apps/
+   web/
+      src/
+         components/
+         pages/
+         features/
+         hooks/
+         services/
+         types/
+         utils/
+
+I would organize the frontend by business domain, not just by generic components.
+
+For example:
+
+features/
+   sales/
+   customers/
+   inventory/
+   procurement/
+   suppliers/
+   products/
+   configuration/
+   reports/
+
+This becomes important as the application grows.
+
+4. POS Interface
+
+The most important screen is the Sales / POS screen.
+
+It should be extremely fast.
+
+Something like:
+
+┌───────────────────────────────────────────────┐
+│ CUSTOMER                                      │
+│ [ Search Mobile Number ................ ]     │
+├───────────────────────────────────────────────┤
+│                                               │
+│ + Customized Perfume                          │
+│ + Ready Made Perfume                          │
+│                                               │
+├───────────────────────────────────────────────┤
+│ ORDER                                         │
+│                                               │
+│ Oud | EDP | 100ml | Bottle A | Box     350    │
+│ Sauvage Copy | 100ml                   250    │
+│                                               │
+├───────────────────────────────────────────────┤
+│ Subtotal                              600     │
+│ Discount [10% ▼]                       60     │
+│ TOTAL                                 540     │
+│                                               │
+│ [ CASH ] [ VISA ] [ INSTAPAY ]               │
+│                                               │
+│             [ COMPLETE SALE ]                 │
+└───────────────────────────────────────────────┘
+
+The salesperson shouldn't have to navigate through 10 pages to sell one perfume.
+
+5. Customized Perfume Builder
+
+This deserves its own component.
+
+CUSTOM PERFUME
+
+Oil
+[ Oud ▼ ]
+
+Concentration
+[ EDP ▼ ]
+
+Bottle
+[ Classic ▼ ]
+
+Size
+[ 100ml ▼ ]
+
+Standard Oil
+20 ml
+
+Actual Oil
+[ 25 ml ]
+
+Stabilizer
+[ + Add Stabilizer ]
+
+Alcohol
+73 ml
+
+Packaging
+[ Gift Box ▼ ]
+
+Customer Bottle
+[ No ]
+
+────────────────────
+
+Material Cost
+234.65 EGP
+
+Markup
+50%
+
+Suggested Price
+351.98 EGP
+
+The calculation should update immediately.
+
+6. Backend
+
+I recommend NestJS.
+
+Why?
+
+Because your application will have a lot of business modules.
+
+NestJS gives us a clean architecture:
+
+src/
+   modules/
+      sales/
+      customers/
+      inventory/
+      procurement/
+      suppliers/
+      products/
+      pricing/
+      returns/
+      waste/
+      reports/
+      users/
+      configuration/
+
+Each module can have:
+
+sales/
+   sales.controller.ts
+   sales.service.ts
+   sales.repository.ts
+   sales.dto.ts
+   sales.types.ts
+7. Most Important Architecture Principle
+
+Don't put business calculations inside React.
+
+For example, don't rely on:
+
+frontend:
+price = cost * 1.5
+
+because somebody can manipulate the browser.
+
+Instead:
+
+React
+   ↓
+POST /sales
+   ↓
+Backend
+   ↓
+Validate
+   ↓
+Calculate recipe
+   ↓
+Calculate cost
+   ↓
+Calculate price
+   ↓
+Validate inventory
+   ↓
+Create sale
+   ↓
+Create inventory movements
+   ↓
+Create payment
+   ↓
+Commit transaction
+
+The backend is the source of truth.
+
+8. PostgreSQL
+
+PostgreSQL is the most important choice in the system.
+
+I would definitely use PostgreSQL.
+
+The application has highly relational data:
+
+Customer
+   ↓
+Sales Order
+   ↓
+Sales Lines
+   ↓
+Customized Configuration
+   ↓
+Oil
+   ↓
+Inventory
+
+and:
+
+Supplier
+   ↓
+Purchase Invoice
+   ↓
+Purchase Lines
+   ↓
+Inventory
+   ↓
+Weighted Average Cost
+
+PostgreSQL is excellent for this.
+
+9. Database Architecture
+
+I would divide the database logically into domains.
+
+Master Data
+customers
+suppliers
+oils
+alcohols
+stabilizers
+bottles
+pumps
+packaging_items
+products
+concentrations
+Transactions
+sales_orders
+sales_order_lines
+
+purchase_invoices
+purchase_invoice_lines
+
+supplier_payments
+
+returns
+return_lines
+
+waste_transactions
+stock_adjustments
+Inventory
+inventory_items
+inventory_balances
+inventory_movements
+Customized Perfumes
+customized_configurations
+finished_customized_items
+Configuration
+pricing_configurations
+discount_configurations
+system_configurations
+10. Inventory Architecture
+
+This is where I would be very strict.
+
+Don't make:
+
+inventory_quantity
+
+the only source of truth.
+
+Instead:
+
+Inventory Movement Ledger
+
+is the source of truth.
+
+Example:
+
+Oil Oud
+
+Opening          +5,000 ml
+Purchase         +2,000 ml
+Sale             -25 ml
+Sale             -20 ml
+Waste            -10 ml
+Adjustment       +50 ml
+-------------------------
+On Hand          6,995 ml
+
+We can maintain a balance table for performance:
+
+inventory_balances
+
+but every balance must be explainable through:
+
+inventory_movements
+11. Weighted Average Cost Architecture
+
+Every inventory item should have:
+
+quantity_on_hand
+average_cost
+inventory_value
+
+After purchasing:
+
+new_value =
+    old_quantity * old_average_cost
+    +
+    purchased_quantity * purchase_cost
+
+Then:
+
+new_quantity =
+    old_quantity + purchased_quantity
+
+And:
+
+new_average_cost =
+    new_value / new_quantity
+
+Example:
+
+Existing:
+
+1,000 ml
+5 EGP/ml
+
+Purchase:
+
+2,000 ml
+6 EGP/ml
+
+New value:
+
+1,000 × 5 = 5,000
+2,000 × 6 = 12,000
+
+Total = 17,000
+
+Quantity = 3,000 ml
+
+Average = 17,000 / 3,000
+
+= 5.6667 EGP/ml
+
+This calculation belongs in the backend/domain layer.
+
+12. Sales Transaction
+
+When the user presses:
+
+Complete Sale
+
+the backend should execute one database transaction.
+
+Conceptually:
+
+BEGIN TRANSACTION
+
+1. Validate customer
+
+2. Validate products
+
+3. Calculate customized recipes
+
+4. Calculate component requirements
+
+5. Check inventory
+
+6. Calculate weighted-average cost
+
+7. Calculate selling price
+
+8. Apply order discount
+
+9. Create sales order
+
+10. Create sales lines
+
+11. Create customized configurations
+
+12. Create inventory movements
+
+13. Update inventory balances
+
+14. Create payment
+
+15. Update customer history
+
+COMMIT
+
+If something fails:
+
+ROLLBACK
+
+This is critical.
+
+We don't want:
+
+Sale created ✓
+Payment created ✓
+Oil consumed ✗
+
+That would corrupt the inventory.
+
+13. API Design
+
+I'd use REST APIs initially.
+
+Example:
+
+POST   /api/v1/sales
+GET    /api/v1/sales/:id
+POST   /api/v1/sales/:id/return
+
+GET    /api/v1/customers
+POST   /api/v1/customers
+GET    /api/v1/customers/:id
+
+GET    /api/v1/inventory
+GET    /api/v1/inventory/movements
+
+POST   /api/v1/purchases
+GET    /api/v1/purchases/:id
+
+POST   /api/v1/suppliers/:id/payments
+GET    /api/v1/suppliers/:id/statement
+
+GET    /api/v1/reports/sales
+GET    /api/v1/reports/inventory
+GET    /api/v1/reports/profitability
+
+Use:
+
+/api/v1/
+
+from day one.
+
+That makes future API versions much easier.
+
+14. Authentication
+
+Since you already work with Supabase, we could continue using:
+
+Supabase Auth
+
+for authentication.
+
+Architecture:
+
+User
+ ↓
+Supabase Auth
+ ↓
+JWT
+ ↓
+React
+ ↓
+Backend
+ ↓
+Validate JWT
+ ↓
+PostgreSQL
+
+However, I would keep the business database access behind the backend.
+
+The browser should not be allowed to directly modify inventory or supplier balances.
+
+15. Supabase vs Self-Hosted PostgreSQL
+
+Since you're already familiar with Supabase, there are two reasonable approaches.
+
+Option A — Supabase PostgreSQL
+React
+ ↓
+NestJS
+ ↓
+Supabase PostgreSQL
+
+This is my preferred MVP approach if you want to move quickly.
+
+Option B — PostgreSQL on your server
+React
+ ↓
+NestJS
+ ↓
+PostgreSQL
+
+This gives you more infrastructure control.
+
+For the first outlet, Option A is perfectly reasonable.
+
+16. Deployment
+
+Since you've already been working with Docker, I'd keep the architecture Dockerized.
+
+Server
+│
+├── nginx
+│
+├── web container
+│
+└── api container
+
+Potentially:
+
+Docker Compose
+
+for MVP.
+
+Example:
+
+docker-compose.yml
+
+services:
+
+  web:
+    build: ./apps/web
+
+  api:
+    build: ./apps/api
+
+PostgreSQL can remain managed through Supabase initially.
+
+17. Production Architecture
+
+Eventually:
+
+                    Internet
+                       │
+                       ▼
+                  HTTPS / TLS
+                       │
+                       ▼
+                    NGINX
+                       │
+             ┌─────────┴─────────┐
+             ▼                   ▼
+          React               NestJS
+          Web                  API
+                                 │
+                    ┌────────────┼────────────┐
+                    ▼            ▼            ▼
+               PostgreSQL      Redis       Storage
+18. Redis
+
+I wouldn't introduce Redis on day one unless we actually need it.
+
+Later it can be used for:
+
+Session/cache
+Dashboard caching
+Rate limiting
+Background jobs
+Notifications
+
+For MVP:
+
+PostgreSQL is enough.
+
+19. Background Jobs
+
+Eventually we may need:
+
+BullMQ + Redis
+
+for:
+
+Reports
+Notifications
+Email
+Online orders
+Scheduled inventory alerts
+
+But not necessary for MVP.
+
+20. Reporting Architecture
+
+Don't calculate huge reports by pulling every transaction into React.
+
+Instead:
+
+PostgreSQL
+     ↓
+SQL queries / Views
+     ↓
+Backend
+     ↓
+Dashboard
+
+For example:
+
+Daily Sales
+Monthly Sales
+Gross Margin
+Oil Consumption
+Supplier Balance
+Inventory Valuation
+
+For heavier analytics later, we can introduce materialized views.
+
+21. Important: Inventory Cost vs Sales Price
+
+I recommend storing both:
+
+cost_at_sale
+selling_price
+
+on the sales line.
+
+Why?
+
+Suppose:
+
+Today:
+
+Oil cost = 5 EGP/ml
+
+Tomorrow:
+
+Oil cost = 7 EGP/ml
+
+A historical sale must remain:
+
+Cost at Sale = 5 EGP/ml
+
+It should not change retroactively when inventory cost changes.
+
+Therefore:
+
+Historical transaction
+       ↓
+Frozen cost snapshot
+
+while the current inventory maintains:
+
+Current weighted average cost
+22. Auditability
+
+Every financial/inventory transaction needs an immutable history.
+
+For example:
+
+SALE-000124
+Created by: Mohammed
+Date: 26-Aug-2026
+
+Inventory movements:
+
+Oud       -25ml
+Alcohol   -73ml
+Bottle    -1
+Pump      -1
+Box       -1
+
+We should never simply delete those records.
+
+If something needs to be reversed:
+
+Original transaction
+        ↓
+Reversal transaction
+
+This is much safer.
+
+23. Configuration Architecture
+
+Instead of hardcoding:
+
+EDP = 20%
+Markup = 50%
+Discounts = [5,10,15]
+
+put them in database configuration.
+
+For example:
+
+concentrations
+
+id
+name
+oil_percentage
+active
+
+and:
+
+pricing_configurations
+
+id
+markup_percentage
+effective_from
+active
+
+This allows the owner to change configuration from the UI.
+
+24. Frontend State Management
+
+I would use:
+
+Server state
+
+TanStack Query
+
+for:
+
+Customers
+Products
+Inventory
+Suppliers
+Sales
+Reports
+Local UI state
+
+Zustand
+
+for things like:
+
+Current POS order
+Selected customer
+Current customized perfume builder
+
+This is a very good combination for this application.
+
+25. Forms
+
+Use:
+
+React Hook Form + Zod
+
+For example:
+
+Customer Form
+Purchase Invoice
+Supplier Payment
+Customized Perfume
+Configuration
+
+Zod validation can also share schemas between frontend/backend where practical.
+
+26. Barcode Support
+
+Even if you don't need it immediately, the architecture should support barcode scanning.
+
+For ready-made perfumes:
+
+Barcode
+ ↓
+Scan
+ ↓
+Product
+ ↓
+Add to cart
+
+For bottles/packaging/components, barcode support can be added later.
+
+27. Mobile / Tablet
+
+Because this is an outlet POS, I would make the frontend:
+
+Responsive from day one.
+
+Target:
+
+Desktop
+Tablet
+Mobile
+
+But optimize the primary POS workflow for:
+
+Tablet / Desktop
+
+rather than making it a mobile-first consumer application.
+
+28. Recommended Project Structure
+
+I would start with a monorepo:
+
+perfume-system/
+
+├── apps/
+│   ├── web/
+│   │   ├── src/
+│   │   │   ├── features/
+│   │   │   │   ├── sales/
+│   │   │   │   ├── customers/
+│   │   │   │   ├── inventory/
+│   │   │   │   ├── procurement/
+│   │   │   │   ├── suppliers/
+│   │   │   │   ├── products/
+│   │   │   │   └── reports/
+│   │   │   └── components/
+│   │
+│   └── api/
+│       └── src/
+│           ├── modules/
+│           │   ├── sales/
+│           │   ├── customers/
+│           │   ├── inventory/
+│           │   ├── procurement/
+│           │   ├── suppliers/
+│           │   ├── products/
+│           │   ├── pricing/
+│           │   ├── returns/
+│           │   ├── waste/
+│           │   └── reports/
+│           │
+├── packages/
+│   ├── types/
+│   ├── validation/
+│   └── shared/
+│
+├── docker-compose.yml
+├── package.json
+└── README.md
+29. Technology Stack — Final Recommendation
+Frontend
+
+React
++
+TypeScript
++
+Vite
++
+Tailwind CSS
++
+shadcn/ui
++
+TanStack Query
++
+Zustand
++
+React Hook Form
++
+Zod
+
+Backend
+
+Node.js
++
+TypeScript
++
+NestJS
++
+Prisma
+
+Database
+
+PostgreSQL
+
+Authentication
+
+Supabase Auth
+
+Storage
+
+Supabase Storage / S3
+
+Infrastructure
+
+Docker
++
+Docker Compose
++
+Nginx
++
+Ubuntu
+
+Source control
+
+GitHub
+
+CI/CD
+
+GitHub Actions
+
+30. One Important Change to the PRD
+
+Before we start coding, I would add one architectural concept to the PRD:
+
+Inventory Item
+
+Instead of treating oils, bottles, pumps, boxes, etc. as completely separate inventory engines, create a unified concept:
+
+inventory_items
+
+with:
+
+item_type
+
+such as:
+
+OIL
+ALCOHOL
+STABILIZER
+BOTTLE
+PUMP
+PACKAGING
+READY_MADE
+FINISHED_CUSTOMIZED
+
+Then the inventory engine becomes generic.
+
+For example:
+
+Inventory Item
+      │
+      ├── Oil
+      ├── Alcohol
+      ├── Bottle
+      ├── Pump
+      ├── Box
+      ├── Ready-made perfume
+      └── Finished customized perfume
+
+This will make the system much easier to extend.
+
+31. The Most Important Design Decision
+
+I would build the system around this principle:
+
+Sales are not merely orders. Sales are inventory-consuming business transactions.
+
+For customized perfume:
+
+Sale
+ │
+ ├── Revenue
+ ├── Payment
+ ├── Customer history
+ ├── Recipe snapshot
+ ├── Cost snapshot
+ └── Inventory consumption
+       ├── Oil
+       ├── Alcohol
+       ├── Stabilizer
+       ├── Bottle
+       ├── Pump
+       └── Packaging
+
+For procurement:
+
+Purchase
+ │
+ ├── Supplier liability
+ ├── Inventory receipt
+ ├── Weighted average cost
+ └── Supplier ledger
+
+For return:
+
+Return
+ │
+ ├── Customer refund
+ ├── Inventory
+ │
+ └── Customized?
+       │
+       └── Finished Customized Stock
