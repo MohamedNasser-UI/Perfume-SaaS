@@ -56,7 +56,7 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
     const localId = crypto.randomUUID();
     const payload = init.body ? JSON.parse(String(init.body)) : {};
     if (type === "CUSTOMER" && !payload.id) payload.id = localId;
-    if (type === "OIL_UPDATE" || type === "BOTTLE_UPDATE" || type === "CONCENTRATION_UPDATE" || type === "DISCOUNT_UPDATE") {
+    if (type.endsWith("_UPDATE") || type.endsWith("_DELETE")) {
       const id = path.split("?")[0].split("/").filter(Boolean).pop();
       payload.id = payload.id ?? id;
     }

@@ -33,12 +33,14 @@ enum ItemType {
   PACKAGING
   READY_MADE
   FINISHED_CUSTOMIZED
+  OTHER
 }
 
 enum ProductClassification {
   CUSTOMIZED
   ORIGINAL
   HIGH_COPY
+  OTHER
 }
 
 enum MovementType {
@@ -71,6 +73,7 @@ enum LineType {
   ORIGINAL
   HIGH_COPY
   FINISHED_CUSTOMIZED
+  OTHER
 }
 
 enum SupplierLedgerType {

@@ -12,8 +12,8 @@ export function LoginPage() {
   const { login, loginOffline, authorizedUsers, authStatus, tenant, online, user, loading } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("owner@noor.perfume");
-  const [password, setPassword] = useState("ChangeMe123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 

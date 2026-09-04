@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "tsx --test src/lib/outlet.spec.ts src/lib/license-recovery.spec.ts"
+    "test": "tsx --test src/lib/outlet.spec.ts src/lib/license-recovery.spec.ts src/lib/pos-store.spec.ts src/lib/pos-stock.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",

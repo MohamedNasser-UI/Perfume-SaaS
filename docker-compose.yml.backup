@@ -6,8 +6,8 @@ services:
       POSTGRES_USER: perfume
       POSTGRES_PASSWORD: perfume
       POSTGRES_DB: perfume
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,10 +23,10 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      PORT: ${PORT:-3001}
-      WEB_ORIGIN: ${WEB_ORIGIN}
-      APP_PUBLIC_URL: ${APP_PUBLIC_URL}
+      DATABASE_URL: postgresql://perfume:perfume@postgres:5432/perfume?schema=public
+      PORT: 3001
+      WEB_ORIGIN: http://localhost,http://127.0.0.1
+      APP_PUBLIC_URL: http://localhost
     volumes:
       - uploads:/app/apps/api/uploads
     depends_on:

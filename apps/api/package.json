@@ -10,7 +10,7 @@
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "test": "tsx --test src/modules/license/license.crypto.spec.ts src/modules/license/offline-matrix.spec.ts src/modules/auth/auth-tokens.spec.ts src/modules/auth/login-throttle.spec.ts src/modules/auth/auth.guards.spec.ts src/modules/auth/auth.service.spec.ts src/modules/auth/auth-rate-limit.spec.ts"
+    "test": "tsx --test src/modules/license/license.crypto.spec.ts src/modules/license/offline-matrix.spec.ts src/modules/auth/auth-tokens.spec.ts src/modules/auth/login-throttle.spec.ts src/modules/auth/auth.guards.spec.ts src/modules/auth/auth.service.spec.ts src/modules/auth/auth-rate-limit.spec.ts src/modules/catalog/catalog.service.spec.ts src/modules/catalog/catalog-codes.spec.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

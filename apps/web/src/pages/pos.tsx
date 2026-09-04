@@ -1,21 +1,33 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { usePos, CustomPreview, PosLine } from "@/lib/pos-store";
+import { maxPosLineQty, type InventoryOnHand, type PosStockCatalog } from "@/lib/pos-stock";
 import { Button, Card, Input, Label, Select } from "@/components/ui";
 import { money } from "@/lib/utils";
 import { canSeeItemCost } from "@/lib/staff-pages";
 
+type ItemRef = { id: string; inventoryItemId?: string; inventoryItem?: { id: string }; active?: boolean };
+
 type Catalog = {
-  oils: { id: string; name: string }[];
+  oils: Array<ItemRef & { name: string }>;
   concentrations: { id: string; name: string; oilPercentage: number; active?: boolean }[];
-  bottles: { id: string; design: string; sizeMl: number; imageUrl?: string | null; pump?: { name: string } }[];
-  packaging: { id: string; name: string }[];
-  stabilizers: { id: string; name: string }[];
-  products: { id: string; name: string; classification: "ORIGINAL" | "HIGH_COPY"; sellingPrice: number; barcode?: string }[];
+  bottles: Array<
+    ItemRef & {
+      design: string;
+      sizeMl: number;
+      imageUrl?: string | null;
+      pump?: ItemRef & { name: string };
+    }
+  >;
+  packaging: Array<ItemRef & { name: string }>;
+  stabilizers: Array<ItemRef & { name: string }>;
+  alcohols: Array<ItemRef & { name: string; active?: boolean }>;
+  products: Array<ItemRef & { name: string; classification: "ORIGINAL" | "HIGH_COPY"; sellingPrice: number; barcode?: string }>;
+  others: Array<ItemRef & { name: string; classification: "OTHER"; sellingPrice: number }>;
   discounts: { id: string; name: string; percentage: number; active: boolean }[];
   paymentMethods: { id: string; name: string; code: string; active: boolean }[];
   markup: number;
@@ -25,21 +37,26 @@ export function PosPage() {
   const { tenant } = useAuth();
   const { t, locale } = useI18n();
   const pos = usePos();
+  const queryClient = useQueryClient();
   const ccy = tenant?.currency ?? "EGP";
   const [mobile, setMobile] = useState("");
   const [newName, setNewName] = useState("");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [readyOpen, setReadyOpen] = useState(false);
+  const [othersOpen, setOthersOpen] = useState(false);
   const [barcode, setBarcode] = useState("");
   const [mobileQuery, setMobileQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestBox = useRef<HTMLDivElement>(null);
 
-  const oils = useQuery({ queryKey: ["oils"], queryFn: () => api<{ id: string; name: string }[]>("/oils") });
+  const oils = useQuery({ queryKey: ["oils"], queryFn: () => api<Catalog["oils"]>("/oils") });
   const bottles = useQuery({ queryKey: ["bottles"], queryFn: () => api<Catalog["bottles"]>("/bottles") });
   const packaging = useQuery({ queryKey: ["packaging"], queryFn: () => api<Catalog["packaging"]>("/packaging") });
   const stabilizers = useQuery({ queryKey: ["stabilizers"], queryFn: () => api<Catalog["stabilizers"]>("/stabilizers") });
+  const alcohols = useQuery({ queryKey: ["alcohols"], queryFn: () => api<Catalog["alcohols"]>("/alcohols") });
   const products = useQuery({ queryKey: ["products"], queryFn: () => api<Catalog["products"]>("/products") });
+  const others = useQuery({ queryKey: ["others"], queryFn: () => api<Catalog["others"]>("/others") });
+  const inventory = useQuery({ queryKey: ["inventory"], queryFn: () => api<InventoryOnHand[]>("/inventory") });
   const settings = useQuery({
     queryKey: ["settings"],
     queryFn: () =>
@@ -77,6 +94,18 @@ export function PosPage() {
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
+
+  const stockCatalog = useMemo<PosStockCatalog>(
+    () => ({
+      products: [...(products.data ?? []), ...(others.data ?? [])],
+      oils: oils.data ?? [],
+      bottles: bottles.data ?? [],
+      alcohols: alcohols.data ?? [],
+      stabilizers: stabilizers.data ?? [],
+      packaging: packaging.data ?? [],
+    }),
+    [products.data, others.data, oils.data, bottles.data, alcohols.data, stabilizers.data, packaging.data],
+  );
 
   const subtotal = pos.lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const discountAmt = subtotal * (pos.discountPct / 100);
@@ -133,6 +162,7 @@ export function PosPage() {
       toast.success(t("pos.salePosted", { number: order.orderNumber }));
       pos.clear();
       setMobile("");
+      void queryClient.invalidateQueries({ queryKey: ["inventory"] });
     },
     onError: (err) => {
       const body = err instanceof ApiError ? err.body : null;
@@ -233,6 +263,9 @@ export function PosPage() {
           <Button type="button" variant="outline" onClick={() => setReadyOpen(true)}>
             {t("pos.readyMade")}
           </Button>
+          <Button type="button" variant="outline" onClick={() => setOthersOpen(true)}>
+            {t("pos.others")}
+          </Button>
         </div>
         <div className="flex gap-2">
           <Input value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder={t("pos.scanBarcode")} />
@@ -243,22 +276,55 @@ export function PosPage() {
 
         <div className="space-y-2">
           {pos.lines.length === 0 && <p className="text-sm text-stone-500">{t("pos.noLines")}</p>}
-          {pos.lines.map((l) => (
-            <div key={l.key} className="flex items-center justify-between rounded-xl border border-stone-200 p-3">
-              <div>
+          {pos.lines.map((l) => {
+            const maxQty = maxPosLineQty({
+              inventory: inventory.data,
+              catalog: stockCatalog,
+              lines: pos.lines,
+              lineKey: l.key,
+            });
+            return (
+            <div key={l.key} className="flex items-center gap-3 rounded-xl border border-stone-200 p-3">
+              <div className="min-w-0 flex-1">
                 <div className="font-medium">{l.label}</div>
-                <div className="text-xs text-stone-500">
-                  {l.lineType} · {t("pos.qty", { qty: l.qty })}
-                </div>
+                <div className="text-xs text-stone-500">{l.lineType}</div>
               </div>
-              <div className="flex items-center gap-3">
+              {l.lineType !== "FINISHED_CUSTOMIZED" ? (
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 w-9 px-0 text-lg"
+                    aria-label={t("pos.qtyDecrease")}
+                    disabled={l.qty <= 1}
+                    onClick={() => pos.setLineQty(l.key, l.qty - 1, maxQty)}
+                  >
+                    −
+                  </Button>
+                  <span className="min-w-8 text-center font-medium tabular-nums" aria-live="polite">
+                    {l.qty}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 w-9 px-0 text-lg"
+                    aria-label={t("pos.qtyIncrease")}
+                    disabled={maxQty != null && l.qty >= maxQty}
+                    onClick={() => pos.setLineQty(l.key, l.qty + 1, maxQty)}
+                  >
+                    +
+                  </Button>
+                </div>
+              ) : null}
+              <div className="flex shrink-0 items-center gap-3">
                 <div className="font-semibold">{money(l.unitPrice * l.qty, ccy, locale)}</div>
                 <Button variant="ghost" onClick={() => pos.removeLine(l.key)}>
                   {t("pos.remove")}
                 </Button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 
@@ -377,6 +443,39 @@ export function PosPage() {
               ))}
             </div>
             <Button className="mt-4" variant="ghost" onClick={() => setReadyOpen(false)}>
+              {t("close")}
+            </Button>
+          </Card>
+        </div>
+      )}
+
+      {othersOpen && (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
+          <Card className="max-h-[80vh] w-full max-w-lg overflow-auto">
+            <h2 className="font-serif text-2xl">{t("pos.othersTitle")}</h2>
+            <div className="mt-4 space-y-2">
+              {(others.data ?? []).map((p) => (
+                <button
+                  key={p.id}
+                  className="flex w-full items-center justify-between rounded-xl border p-3 text-start hover:bg-stone-50"
+                  onClick={() => {
+                    pos.addLine({
+                      key: crypto.randomUUID(),
+                      lineType: "OTHER",
+                      label: p.name,
+                      qty: 1,
+                      unitPrice: Number(p.sellingPrice),
+                      productId: p.id,
+                    });
+                    setOthersOpen(false);
+                  }}
+                >
+                  <span>{p.name}</span>
+                  <span>{money(Number(p.sellingPrice), ccy, locale)}</span>
+                </button>
+              ))}
+            </div>
+            <Button className="mt-4" variant="ghost" onClick={() => setOthersOpen(false)}>
               {t("close")}
             </Button>
           </Card>

@@ -113,6 +113,7 @@ export const inventoryItemSchema = z.object({
     "PACKAGING",
     "READY_MADE",
     "FINISHED_CUSTOMIZED",
+    "OTHER",
   ]),
   purchaseUnit: z.enum(["ML", "L", "PCS"]).default("PCS"),
   stockUnit: z.enum(["ML", "L", "PCS"]).default("PCS"),
@@ -121,14 +122,12 @@ export const inventoryItemSchema = z.object({
 });
 
 export const oilSchema = z.object({
-  code: z.string().min(1),
   name: z.string().min(1),
   active: z.boolean().default(true),
   lowStockThreshold: z.number().nonnegative().optional(),
 });
 
 export const bottleSchema = z.object({
-  code: z.string().min(1),
   design: z.string().min(1),
   sizeMl: z.number().positive(),
   pumpId: z.string().optional(),
@@ -136,20 +135,17 @@ export const bottleSchema = z.object({
 });
 
 export const pumpSchema = z.object({
-  code: z.string().min(1),
   name: z.string().min(1),
   active: z.boolean().default(true),
 });
 
 export const packagingSchema = z.object({
-  code: z.string().min(1),
   name: z.string().min(1),
   type: z.enum(["STANDARD_BOX", "PREMIUM_BOX", "GIFT_WRAPPING"]),
   active: z.boolean().default(true),
 });
 
 export const readyMadeSchema = z.object({
-  sku: z.string().min(1),
   name: z.string().min(1),
   brand: z.string().optional(),
   classification: z.enum(["ORIGINAL", "HIGH_COPY"]),
@@ -158,6 +154,22 @@ export const readyMadeSchema = z.object({
   sellingPrice: z.number().positive(),
   active: z.boolean().default(true),
 });
+
+export const othersSchema = z.object({
+  name: z.string().min(1),
+  sellingPrice: z.number().positive(),
+  active: z.boolean().default(true),
+});
+
+export const oilUpdateSchema = oilSchema.pick({ name: true, active: true, lowStockThreshold: true }).partial();
+export const pumpUpdateSchema = pumpSchema.pick({ name: true, active: true }).partial();
+export const bottleUpdateSchema = bottleSchema
+  .pick({ design: true, sizeMl: true, active: true })
+  .partial()
+  .extend({ pumpId: z.string().nullable().optional() });
+export const packagingUpdateSchema = packagingSchema.pick({ name: true, type: true, active: true }).partial();
+export const readyMadeUpdateSchema = readyMadeSchema.partial();
+export const othersUpdateSchema = othersSchema.partial();
 
 export const concentrationSchema = z.object({
   name: z.string().min(1),
@@ -279,7 +291,7 @@ export const customizedLineSchema = z.object({
 });
 
 export const readyMadeLineSchema = z.object({
-  lineType: z.enum(["ORIGINAL", "HIGH_COPY"]),
+  lineType: z.enum(["ORIGINAL", "HIGH_COPY", "OTHER"]),
   productId: z.string().min(1),
   quantity: z.number().int().positive(),
 });
@@ -336,3 +348,8 @@ export type DiscountUpdateInput = z.infer<typeof discountUpdateSchema>;
 export type LicenseRenewInput = z.infer<typeof licenseRenewSchema>;
 export type SyncPushInput = z.infer<typeof syncPushSchema>;
 export type UpdateStaffPagesInput = z.infer<typeof updateStaffPagesSchema>;
+export type OilUpdateInput = z.infer<typeof oilUpdateSchema>;
+export type PumpUpdateInput = z.infer<typeof pumpUpdateSchema>;
+export type BottleUpdateInput = z.infer<typeof bottleUpdateSchema>;
+export type PackagingUpdateInput = z.infer<typeof packagingUpdateSchema>;
+export type ReadyMadeUpdateInput = z.infer<typeof readyMadeUpdateSchema>;

@@ -24,6 +24,8 @@ const OWNER_ONLY = new Set([
   "PUMP_CREATE",
   "PACKAGING_CREATE",
   "PRODUCT_CREATE",
+  "OTHER_CREATE",
+  "OTHER_UPDATE",
   "CONCENTRATION_CREATE",
   "CONCENTRATION_UPDATE",
   "DISCOUNT_CREATE",
@@ -42,11 +44,13 @@ const APPLY_ORDER = [
   "BOTTLE_CREATE",
   "PACKAGING_CREATE",
   "PRODUCT_CREATE",
+  "OTHER_CREATE",
   "CONCENTRATION_CREATE",
   "DISCOUNT_CREATE",
   "PAYMENT_METHOD_CREATE",
   "OIL_UPDATE",
   "BOTTLE_UPDATE",
+  "OTHER_UPDATE",
   "CONCENTRATION_UPDATE",
   "DISCOUNT_UPDATE",
   "PURCHASE",
@@ -102,6 +106,7 @@ export class SyncService {
       adjustments,
       items,
       outlets,
+      others,
     ] = await Promise.all([
       this.catalog.listOils(tenantId),
       this.catalog.listAlcohols(tenantId),
@@ -139,6 +144,7 @@ export class SyncService {
       }),
       this.catalog.listItems(tenantId),
       this.prisma.outlet.findMany({ where: { tenantId, active: true }, orderBy: { name: "asc" } }),
+      this.catalog.listOthers(tenantId),
     ]);
 
     return {
@@ -150,6 +156,7 @@ export class SyncService {
       pumps,
       packaging,
       products,
+      others,
       settings,
       customers,
       suppliers,
@@ -285,6 +292,8 @@ export class SyncService {
           name: payload.name as string | undefined,
           active: payload.active as boolean | undefined,
         });
+      case "OIL_DELETE":
+        return this.catalog.deleteOil(tenantId, String(payload.id));
       case "BOTTLE_CREATE":
         return this.catalog.createBottle(tenantId, payload as Parameters<CatalogService["createBottle"]>[1]);
       case "BOTTLE_UPDATE":
@@ -292,17 +301,59 @@ export class SyncService {
           pumpId: payload.pumpId as string | undefined,
           active: payload.active as boolean | undefined,
           design: payload.design as string | undefined,
+          sizeMl: payload.sizeMl as number | undefined,
         });
+      case "BOTTLE_DELETE":
+        return this.catalog.deleteBottle(tenantId, String(payload.id));
       case "ALCOHOL_CREATE":
         return this.catalog.createAlcohol(tenantId, payload as Parameters<CatalogService["createAlcohol"]>[1]);
+      case "ALCOHOL_UPDATE":
+        return this.catalog.updateAlcohol(tenantId, String(payload.id), {
+          name: payload.name as string | undefined,
+          active: payload.active as boolean | undefined,
+        });
+      case "ALCOHOL_DELETE":
+        return this.catalog.deleteAlcohol(tenantId, String(payload.id));
       case "STABILIZER_CREATE":
         return this.catalog.createStabilizer(tenantId, payload as Parameters<CatalogService["createStabilizer"]>[1]);
+      case "STABILIZER_UPDATE":
+        return this.catalog.updateStabilizer(tenantId, String(payload.id), {
+          name: payload.name as string | undefined,
+          active: payload.active as boolean | undefined,
+        });
+      case "STABILIZER_DELETE":
+        return this.catalog.deleteStabilizer(tenantId, String(payload.id));
       case "PUMP_CREATE":
         return this.catalog.createPump(tenantId, payload as Parameters<CatalogService["createPump"]>[1]);
+      case "PUMP_UPDATE":
+        return this.catalog.updatePump(tenantId, String(payload.id), {
+          name: payload.name as string | undefined,
+          active: payload.active as boolean | undefined,
+        });
+      case "PUMP_DELETE":
+        return this.catalog.deletePump(tenantId, String(payload.id));
       case "PACKAGING_CREATE":
         return this.catalog.createPackaging(tenantId, payload as Parameters<CatalogService["createPackaging"]>[1]);
+      case "PACKAGING_UPDATE":
+        return this.catalog.updatePackaging(tenantId, String(payload.id), {
+          name: payload.name as string | undefined,
+          type: payload.type as Parameters<CatalogService["updatePackaging"]>[2]["type"],
+          active: payload.active as boolean | undefined,
+        });
+      case "PACKAGING_DELETE":
+        return this.catalog.deletePackaging(tenantId, String(payload.id));
       case "PRODUCT_CREATE":
         return this.catalog.createReadyMade(tenantId, payload as Parameters<CatalogService["createReadyMade"]>[1]);
+      case "PRODUCT_UPDATE":
+        return this.catalog.updateReadyMade(tenantId, String(payload.id), payload as Parameters<CatalogService["updateReadyMade"]>[2]);
+      case "PRODUCT_DELETE":
+        return this.catalog.deleteReadyMade(tenantId, String(payload.id));
+      case "OTHER_CREATE":
+        return this.catalog.createOthers(tenantId, payload as Parameters<CatalogService["createOthers"]>[1]);
+      case "OTHER_UPDATE":
+        return this.catalog.updateOthers(tenantId, String(payload.id), payload as Parameters<CatalogService["updateOthers"]>[2]);
+      case "OTHER_DELETE":
+        return this.catalog.deleteOthers(tenantId, String(payload.id));
       case "CONCENTRATION_CREATE":
         return this.configuration.createConcentration(tenantId, payload as { name: string; oilPercentage: number; active?: boolean });
       case "CONCENTRATION_UPDATE":

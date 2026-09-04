@@ -13,10 +13,11 @@ export const ITEM_TYPES = [
   "PACKAGING",
   "READY_MADE",
   "FINISHED_CUSTOMIZED",
+  "OTHER",
 ] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];
 
-export const PRODUCT_CLASSIFICATIONS = ["CUSTOMIZED", "ORIGINAL", "HIGH_COPY"] as const;
+export const PRODUCT_CLASSIFICATIONS = ["CUSTOMIZED", "ORIGINAL", "HIGH_COPY", "OTHER"] as const;
 export type ProductClassification = (typeof PRODUCT_CLASSIFICATIONS)[number];
 
 export const MOVEMENT_TYPES = [
@@ -40,7 +41,7 @@ export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
 export const SALES_STATUSES = ["COMPLETED", "RETURNED", "PARTIALLY_RETURNED"] as const;
 export type SalesStatus = (typeof SALES_STATUSES)[number];
 
-export const LINE_TYPES = ["CUSTOMIZED", "ORIGINAL", "HIGH_COPY", "FINISHED_CUSTOMIZED"] as const;
+export const LINE_TYPES = ["CUSTOMIZED", "ORIGINAL", "HIGH_COPY", "FINISHED_CUSTOMIZED", "OTHER"] as const;
 export type LineType = (typeof LINE_TYPES)[number];
 
 export type CreditTerms = string;

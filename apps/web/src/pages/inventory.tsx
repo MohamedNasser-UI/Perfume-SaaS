@@ -18,7 +18,8 @@ type ItemType =
   | "PUMP"
   | "PACKAGING"
   | "READY_MADE"
-  | "FINISHED_CUSTOMIZED";
+  | "FINISHED_CUSTOMIZED"
+  | "OTHER";
 
 type InventoryRow = {
   itemId: string;
@@ -46,6 +47,7 @@ const CATEGORIES: { id: "ALL" | ItemType; key: MessageKey }[] = [
   { id: "ALCOHOL", key: "products.alcohol" },
   { id: "STABILIZER", key: "products.stabilizers" },
   { id: "READY_MADE", key: "products.readyMade" },
+  { id: "OTHER", key: "products.others" },
   { id: "FINISHED_CUSTOMIZED", key: "inventory.finished" },
 ];
 

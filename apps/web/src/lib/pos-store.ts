@@ -40,7 +40,7 @@ export type PosLine =
     }
   | {
       key: string;
-      lineType: "ORIGINAL" | "HIGH_COPY";
+      lineType: "ORIGINAL" | "HIGH_COPY" | "OTHER";
       label: string;
       qty: number;
       unitPrice: number;
@@ -66,6 +66,7 @@ type PosState = {
   setCustomer: (c: Customer | null) => void;
   addLine: (line: PosLine) => void;
   removeLine: (key: string) => void;
+  setLineQty: (key: string, qty: number, maxQty?: number) => void;
   setDiscount: (id: string | undefined, pct: number) => void;
   setPayment: (id: string) => void;
   clear: () => void;
@@ -78,6 +79,17 @@ export const usePos = create<PosState>((set) => ({
   setCustomer: (customer) => set({ customer }),
   addLine: (line) => set((s) => ({ lines: [...s.lines, line] })),
   removeLine: (key) => set((s) => ({ lines: s.lines.filter((l) => l.key !== key) })),
+  setLineQty: (key, qty, maxQty) =>
+    set((s) => ({
+      lines: s.lines.map((line) => {
+        if (line.key !== key || line.lineType === "FINISHED_CUSTOMIZED") return line;
+        let next = Math.max(1, Math.floor(qty));
+        if (maxQty != null && Number.isFinite(maxQty) && maxQty >= 1) {
+          next = Math.min(next, Math.floor(maxQty));
+        }
+        return { ...line, qty: next };
+      }),
+    })),
   setDiscount: (discountId, discountPct) => set({ discountId, discountPct }),
   setPayment: (paymentMethodId) => set({ paymentMethodId }),
   clear: () => set({ customer: null, lines: [], discountId: undefined, discountPct: 0, paymentMethodId: undefined }),

@@ -15,6 +15,7 @@ export type Snapshot = {
   pumps: unknown[];
   packaging: unknown[];
   products: unknown[];
+  others: unknown[];
   settings: unknown;
   customers: unknown[];
   suppliers: unknown[];
@@ -38,6 +39,7 @@ export async function applySnapshot(snapshot: Snapshot) {
     setCache("/pumps", snapshot.pumps),
     setCache("/packaging", snapshot.packaging),
     setCache("/products", snapshot.products),
+    setCache("/others", snapshot.others ?? []),
     setCache("/settings", snapshot.settings),
     setCache("/customers", snapshot.customers),
     setCache("/suppliers", snapshot.suppliers),
@@ -147,13 +149,28 @@ export function mutationTypeFor(method: string, path: string): string | null {
   if (method === "POST" && path === "/inventory/adjustments") return "ADJUSTMENT";
   if (method === "POST" && base === "/oils") return "OIL_CREATE";
   if (method === "PATCH" && base === "/oils" && id) return "OIL_UPDATE";
+  if (method === "DELETE" && base === "/oils" && id) return "OIL_DELETE";
   if (method === "POST" && base === "/bottles") return "BOTTLE_CREATE";
   if (method === "PATCH" && base === "/bottles" && id) return "BOTTLE_UPDATE";
+  if (method === "DELETE" && base === "/bottles" && id) return "BOTTLE_DELETE";
   if (method === "POST" && base === "/alcohols") return "ALCOHOL_CREATE";
+  if (method === "PATCH" && base === "/alcohols" && id) return "ALCOHOL_UPDATE";
+  if (method === "DELETE" && base === "/alcohols" && id) return "ALCOHOL_DELETE";
   if (method === "POST" && base === "/stabilizers") return "STABILIZER_CREATE";
+  if (method === "PATCH" && base === "/stabilizers" && id) return "STABILIZER_UPDATE";
+  if (method === "DELETE" && base === "/stabilizers" && id) return "STABILIZER_DELETE";
   if (method === "POST" && base === "/pumps") return "PUMP_CREATE";
+  if (method === "PATCH" && base === "/pumps" && id) return "PUMP_UPDATE";
+  if (method === "DELETE" && base === "/pumps" && id) return "PUMP_DELETE";
   if (method === "POST" && base === "/packaging") return "PACKAGING_CREATE";
+  if (method === "PATCH" && base === "/packaging" && id) return "PACKAGING_UPDATE";
+  if (method === "DELETE" && base === "/packaging" && id) return "PACKAGING_DELETE";
   if (method === "POST" && base === "/products") return "PRODUCT_CREATE";
+  if (method === "PATCH" && base === "/products" && id) return "PRODUCT_UPDATE";
+  if (method === "DELETE" && base === "/products" && id) return "PRODUCT_DELETE";
+  if (method === "POST" && base === "/others") return "OTHER_CREATE";
+  if (method === "PATCH" && base === "/others" && id) return "OTHER_UPDATE";
+  if (method === "DELETE" && base === "/others" && id) return "OTHER_DELETE";
   if (method === "POST" && path === "/settings/concentrations") return "CONCENTRATION_CREATE";
   if (method === "PATCH" && path.startsWith("/settings/concentrations/")) return "CONCENTRATION_UPDATE";
   if (method === "POST" && path === "/settings/discounts") return "DISCOUNT_CREATE";
