@@ -6,8 +6,8 @@ services:
       POSTGRES_USER: perfume
       POSTGRES_PASSWORD: perfume
       POSTGRES_DB: perfume
-    expose:
-      - "5432"
+    ports:
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
