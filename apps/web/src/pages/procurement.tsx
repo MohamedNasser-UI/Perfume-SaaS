@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, PageHeader, Select } from "@/components/ui";
@@ -109,6 +110,11 @@ export function NewPurchasePage() {
     );
   }
 
+  function removeLine(index: number) {
+    const next = lines.filter((_, idx) => idx !== index);
+    setLines(next.length ? next : [emptyLine()]);
+  }
+
   const mutate = useMutation({
     mutationFn: () =>
       api("/purchases", {
@@ -148,14 +154,15 @@ export function NewPurchasePage() {
             <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 rounded-lg bg-black px-2 py-2 text-sm font-medium text-white sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 rounded-lg bg-black px-2 py-2 text-sm font-medium text-white sm:grid-cols-5">
           <span>{t("proc.item")}</span>
           <span>{t("proc.qty")}</span>
           <span>{t("proc.unit")}</span>
           <span>{t("proc.unitCost")}</span>
+          <span>{t("proc.action")}</span>
         </div>
         {lines.map((l, i) => (
-          <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <SearchSelect
               items={pickerItems}
               value={l.itemId}
@@ -185,6 +192,15 @@ export function NewPurchasePage() {
               value={l.unitCost}
               onChange={(e) => setLines(lines.map((x, idx) => (idx === i ? { ...x, unitCost: Number(e.target.value) } : x)))}
             />
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 hover:text-red-700"
+              title={t("delete")}
+              aria-label={t("delete")}
+              onClick={() => removeLine(i)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         ))}
         <Button variant="outline" onClick={() => setLines([...lines, emptyLine()])}>

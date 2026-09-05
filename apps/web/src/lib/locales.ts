@@ -219,6 +219,7 @@ export const en = {
   "proc.qty": "Qty",
   "proc.unit": "UOM",
   "proc.unitCost": "Cost",
+  "proc.action": "Action",
   "proc.noItemMatches": "No matching items",
 
   "suppliers.title": "Suppliers",
@@ -598,6 +599,7 @@ export const ar: Record<keyof typeof en, string> = {
   "proc.qty": "الكمية",
   "proc.unit": "وحدة القياس",
   "proc.unitCost": "التكلفة",
+  "proc.action": "إجراء",
   "proc.noItemMatches": "لا توجد أصناف مطابقة",
 
   "suppliers.title": "الموردون",
