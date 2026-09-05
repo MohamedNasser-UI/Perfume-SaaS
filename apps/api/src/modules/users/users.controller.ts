@@ -60,8 +60,18 @@ export class UsersController {
         staffPages: body.role === "STAFF" ? [...DEFAULT_STAFF_PAGES] : [],
       },
     });
-    const outletIds = body.outletIds ?? [];
+    const outletIds = [...new Set(body.outletIds ?? [])];
+    if (body.role === "STAFF" && !outletIds.length) {
+      throw new BadRequestException("Staff must be assigned to at least one outlet");
+    }
     if (outletIds.length) {
+      const found = await this.prisma.outlet.findMany({
+        where: { tenantId, id: { in: outletIds }, active: true },
+        select: { id: true },
+      });
+      if (found.length !== outletIds.length) {
+        throw new BadRequestException("One or more outlets are invalid");
+      }
       await this.prisma.userOutlet.createMany({
         data: outletIds.map((outletId) => ({ userId: user.id, outletId })),
       });

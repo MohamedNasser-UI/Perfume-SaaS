@@ -1,12 +1,33 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, PageHeader, Select } from "@/components/ui";
+import { MultiSearchSelect } from "@/components/multi-search-select";
 import { fmtDate, money } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+
+type CatalogItem = {
+  id: string;
+  name: string;
+  code?: string;
+  itemType?: string;
+  purchaseUnit?: string;
+};
+
+type PurchaseLine = {
+  itemId: string;
+  name: string;
+  quantity: number;
+  unit: "ML" | "L" | "PCS";
+  unitCost: number;
+};
+
+function asPurchaseUnit(value?: string): PurchaseLine["unit"] {
+  return value === "ML" || value === "L" || value === "PCS" ? value : "PCS";
+}
 
 export function PurchasesPage() {
   const { tenant } = useAuth();
@@ -49,16 +70,53 @@ export function NewPurchasePage() {
   const { tenant } = useAuth();
   const { t, locale } = useI18n();
   const suppliers = useQuery({ queryKey: ["suppliers"], queryFn: () => api<any[]>("/suppliers") });
-  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<any[]>("/catalog/items") });
+  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<CatalogItem[]>("/catalog/items") });
   const [supplierId, setSupplierId] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
-  const [lines, setLines] = useState([{ itemId: "", quantity: 1, unit: "L", unitCost: 0 }]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [lines, setLines] = useState<PurchaseLine[]>([]);
+  const headerReady = Boolean(supplierId && invoiceNumber.trim() && invoiceDate);
+  const addedIds = useMemo(() => lines.map((l) => l.itemId), [lines]);
+  const pickerItems = useMemo(
+    () =>
+      (items.data ?? []).map((it) => ({
+        id: it.id,
+        label: it.name,
+        hint: addedIds.includes(it.id) ? t("proc.alreadyAdded") : it.code,
+      })),
+    [items.data, addedIds, t],
+  );
+
+  function addSelectedItems() {
+    const catalog = items.data ?? [];
+    const already = new Set(addedIds);
+    const next = selectedIds
+      .filter((id) => !already.has(id))
+      .map((id) => catalog.find((it) => it.id === id))
+      .filter((it): it is CatalogItem => Boolean(it))
+      .map((it) => ({
+        itemId: it.id,
+        name: it.name,
+        quantity: 1,
+        unit: asPurchaseUnit(it.purchaseUnit),
+        unitCost: 0,
+      }));
+    if (!next.length) return;
+    setLines((current) => [...current, ...next]);
+    setSelectedIds([]);
+  }
+
   const mutate = useMutation({
     mutationFn: () =>
       api("/purchases", {
         method: "POST",
-        body: JSON.stringify({ supplierId, invoiceNumber, invoiceDate, lines: lines.filter((l) => l.itemId) }),
+        body: JSON.stringify({
+          supplierId,
+          invoiceNumber,
+          invoiceDate,
+          lines: lines.map(({ itemId, quantity, unit, unitCost }) => ({ itemId, quantity, unit, unitCost })),
+        }),
       }),
     onSuccess: (res: any) => {
       toast.success(res.creditWarning ? t("proc.creditWarn") : t("proc.posted"));
@@ -87,26 +145,72 @@ export function NewPurchasePage() {
             <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
           </div>
         </div>
+        {headerReady ? (
+          <div className="space-y-2">
+            <Label>{t("item")}</Label>
+            <MultiSearchSelect
+              items={pickerItems}
+              selectedIds={selectedIds}
+              disabledIds={addedIds}
+              onChange={setSelectedIds}
+              placeholder={t("proc.searchItems")}
+              emptyLabel={t("proc.noItemMatches")}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-stone-500">{t("proc.selectedCount", { count: selectedIds.length })}</p>
+              <Button type="button" variant="outline" disabled={!selectedIds.length} onClick={addSelectedItems}>
+                {t("proc.addItems")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {lines.map((l, i) => (
-          <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Select value={l.itemId} onChange={(e) => setLines(lines.map((x, idx) => idx === i ? { ...x, itemId: e.target.value } : x))}>
-              <option value="">{t("item")}</option>
-              {(items.data ?? []).map((it) => (
-                <option key={it.id} value={it.id}>{it.name}</option>
-              ))}
-            </Select>
-            <Input type="number" value={l.quantity} onChange={(e) => setLines(lines.map((x, idx) => idx === i ? { ...x, quantity: Number(e.target.value) } : x))} />
-            <Select value={l.unit} onChange={(e) => setLines(lines.map((x, idx) => idx === i ? { ...x, unit: e.target.value } : x))}>
-              <option>L</option>
-              <option>ML</option>
-              <option>PCS</option>
-            </Select>
-            <Input type="number" value={l.unitCost} onChange={(e) => setLines(lines.map((x, idx) => idx === i ? { ...x, unitCost: Number(e.target.value) } : x))} />
+          <div key={l.itemId} className="space-y-2 rounded-xl border border-stone-200 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="font-medium">{l.name}</div>
+              <Button type="button" variant="ghost" onClick={() => setLines(lines.filter((_, idx) => idx !== i))}>
+                {t("proc.removeLine")}
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div>
+                <Label>{t("quantity")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={l.quantity}
+                  onChange={(e) => setLines(lines.map((x, idx) => (idx === i ? { ...x, quantity: Number(e.target.value) } : x)))}
+                />
+              </div>
+              <div>
+                <Label>{t("proc.unit")}</Label>
+                <Select
+                  value={l.unit}
+                  onChange={(e) =>
+                    setLines(lines.map((x, idx) => (idx === i ? { ...x, unit: asPurchaseUnit(e.target.value) } : x)))
+                  }
+                >
+                  <option value="L">L</option>
+                  <option value="ML">ML</option>
+                  <option value="PCS">PCS</option>
+                </Select>
+              </div>
+              <div>
+                <Label>{t("proc.unitCost")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={l.unitCost}
+                  onChange={(e) => setLines(lines.map((x, idx) => (idx === i ? { ...x, unitCost: Number(e.target.value) } : x)))}
+                />
+              </div>
+            </div>
           </div>
         ))}
-        <Button variant="outline" onClick={() => setLines([...lines, { itemId: "", quantity: 1, unit: "L", unitCost: 0 }])}>{t("proc.addLine")}</Button>
         <div className="text-end font-serif text-2xl">{money(total, tenant?.currency, locale)}</div>
-        <Button onClick={() => mutate.mutate()}>{t("proc.post")}</Button>
+        <Button onClick={() => mutate.mutate()} disabled={!lines.length || mutate.isPending}>
+          {t("proc.post")}
+        </Button>
       </Card>
     </div>
   );

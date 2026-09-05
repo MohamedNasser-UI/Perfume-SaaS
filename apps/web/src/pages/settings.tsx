@@ -21,7 +21,7 @@ export function SettingsPage() {
   const users = useQuery({ queryKey: ["users"], queryFn: () => api<any[]>("/users") });
   const [markup, setMarkup] = useState<number>();
   const [outletName, setOutletName] = useState("");
-  const [userForm, setUserForm] = useState({ email: "", displayName: "", password: "", role: "STAFF" });
+  const [userForm, setUserForm] = useState({ email: "", displayName: "", password: "", role: "STAFF", outletId: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const currentTheme = (tenant?.theme ?? data?.profile?.theme ?? "gold") as ThemeId;
 
@@ -44,12 +44,19 @@ export function SettingsPage() {
       if (!navigator.onLine) {
         throw new Error(t("settings.inviteOffline"));
       }
-      return api("/users", { method: "POST", body: JSON.stringify(userForm) });
+      const { outletId, ...fields } = userForm;
+      return api("/users", {
+        method: "POST",
+        body: JSON.stringify({
+          ...fields,
+          outletIds: fields.role === "STAFF" && outletId ? [outletId] : undefined,
+        }),
+      });
     },
     onSuccess: () => {
       toast.success(t("settings.userCreated"));
       qc.invalidateQueries({ queryKey: ["users"] });
-      setUserForm({ email: "", displayName: "", password: "", role: "STAFF" });
+      setUserForm({ email: "", displayName: "", password: "", role: "STAFF", outletId: "" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -265,12 +272,44 @@ export function SettingsPage() {
           <Input placeholder={t("email")} value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} />
           <Input placeholder={t("password")} type="password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} />
           {user?.role === "OWNER" ? (
-            <Select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}>
+            <Select
+              value={userForm.role}
+              onChange={(e) =>
+                setUserForm({ ...userForm, role: e.target.value, outletId: e.target.value === "OWNER" ? "" : userForm.outletId })
+              }
+            >
               <option value="STAFF">{t("role.STAFF")}</option>
               <option value="OWNER">{t("role.OWNER")}</option>
             </Select>
           ) : null}
-          <Button onClick={() => addUser.mutate()}>{t("settings.invite")}</Button>
+          {userForm.role === "STAFF" ? (
+            <div>
+              <Label>{t("settings.staffOutlet")}</Label>
+              <p className="mb-1 text-xs text-stone-500">{t("settings.staffOutletHint")}</p>
+              <Select value={userForm.outletId} onChange={(e) => setUserForm({ ...userForm, outletId: e.target.value })}>
+                <option value="">{t("select")}</option>
+                {(outlets.data ?? [])
+                  .filter((o) => o.active !== false)
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+              </Select>
+            </div>
+          ) : null}
+          <Button
+            onClick={() => addUser.mutate()}
+            disabled={
+              addUser.isPending ||
+              !userForm.email ||
+              userForm.displayName.trim().length < 2 ||
+              userForm.password.length < 8 ||
+              (userForm.role === "STAFF" && !userForm.outletId)
+            }
+          >
+            {t("settings.invite")}
+          </Button>
         </Card>
         <DevicesCard />
       </div>

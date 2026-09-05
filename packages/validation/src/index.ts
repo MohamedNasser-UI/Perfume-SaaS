@@ -88,13 +88,23 @@ export const STAFF_PAGES = ["dashboard", "procurement", "suppliers", "reports", 
 export type StaffPage = (typeof STAFF_PAGES)[number];
 export const DEFAULT_STAFF_PAGES: StaffPage[] = ["dashboard", "suppliers"];
 
-export const createUserSchema = z.object({
-  email: z.string().email(),
-  displayName: z.string().min(2),
-  password: z.string().min(8),
-  role: z.enum(["OWNER", "STAFF"]),
-  outletIds: z.array(z.string()).optional(),
-});
+export const createUserSchema = z
+  .object({
+    email: z.string().email(),
+    displayName: z.string().min(2),
+    password: z.string().min(8),
+    role: z.enum(["OWNER", "STAFF"]),
+    outletIds: z.array(z.string().min(1)).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === "STAFF" && !(data.outletIds?.length)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["outletIds"],
+        message: "Staff must be assigned to at least one outlet",
+      });
+    }
+  });
 
 export const updateStaffPagesSchema = z.object({
   pages: z.array(z.enum(["dashboard", "procurement", "suppliers", "reports", "settings"])),
