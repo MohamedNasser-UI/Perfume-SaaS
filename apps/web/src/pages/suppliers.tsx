@@ -8,13 +8,16 @@ import { fmtDate, money } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/locales";
+import { paginate, TablePager } from "@/components/table-pager";
 
 export function SuppliersPage() {
   const { tenant } = useAuth();
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["suppliers"], queryFn: () => api<any[]>("/suppliers") });
+  const [page, setPage] = useState(1);
   const [form, setForm] = useState({ name: "", creditTerms: "", creditLimit: "", openingBalance: "" });
+  const paged = paginate(data ?? [], page);
   const mutate = useMutation({
     mutationFn: () =>
       api("/suppliers", {
@@ -85,7 +88,7 @@ export function SuppliersPage() {
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map((s) => (
+            {paged.slice.map((s) => (
               <tr key={s.id} className="border-t">
                 <td className="p-3">
                   <Link className="text-gold" to={`/suppliers/${s.id}`}>{s.name}</Link>
@@ -97,6 +100,7 @@ export function SuppliersPage() {
             ))}
           </tbody>
         </table>
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );

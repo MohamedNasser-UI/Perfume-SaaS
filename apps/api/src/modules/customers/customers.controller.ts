@@ -14,14 +14,16 @@ export class CustomersController {
 
   @Get()
   async list(@TenantId() tenantId: string, @Query("q") q?: string) {
+    const query = q?.trim();
+    const digits = (query ?? "").replace(/\D/g, "");
     const customers = await this.prisma.customer.findMany({
       where: {
         tenantId,
-        ...(q
+        ...(query
           ? {
               OR: [
-                { name: { contains: q, mode: "insensitive" } },
-                { mobile: { contains: q.replace(/\D/g, "") } },
+                { name: { contains: query, mode: "insensitive" } },
+                ...(digits ? [{ mobile: { contains: digits } }] : []),
               ],
             }
           : {}),
@@ -31,7 +33,6 @@ export class CustomersController {
         salesOrders: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true, finalAmount: true } },
       },
       orderBy: { name: "asc" },
-      take: 100,
     });
     const withSpend = await Promise.all(
       customers.map(async (c) => {

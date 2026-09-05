@@ -7,19 +7,30 @@ import { fmtDate, money } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { usePos } from "@/lib/pos-store";
+import { paginate, TablePager } from "@/components/table-pager";
 
 export function CustomersPage() {
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
   const { tenant } = useAuth();
   const { t, locale } = useI18n();
   const { data } = useQuery({
     queryKey: ["customers", q],
     queryFn: () => api<any[]>(`/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   });
+  const paged = paginate(data ?? [], page);
   return (
     <div>
       <PageHeader title={t("customers.title")} />
-      <Input className="mb-4 max-w-sm" placeholder={t("customers.search")} value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input
+        className="mb-4 max-w-sm"
+        placeholder={t("customers.search")}
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setPage(1);
+        }}
+      />
       <Card className="overflow-auto p-0">
         <table className="w-full text-sm">
           <thead className="bg-stone-50 text-start">
@@ -32,7 +43,7 @@ export function CustomersPage() {
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map((c) => (
+            {paged.slice.map((c) => (
               <tr key={c.id} className="border-t">
                 <td className="p-3">
                   <Link className="text-gold" to={`/customers/${c.id}`}>{c.name}</Link>
@@ -45,6 +56,7 @@ export function CustomersPage() {
             ))}
           </tbody>
         </table>
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );

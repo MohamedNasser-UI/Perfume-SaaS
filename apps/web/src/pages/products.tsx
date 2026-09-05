@@ -5,6 +5,7 @@ import { api, ApiError, mediaUrl, uploadFile } from "@/lib/api";
 import { Button, Card, Input, Label, PageHeader, Select } from "@/components/ui";
 import { useI18n } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/locales";
+import { paginate, TablePager } from "@/components/table-pager";
 
 const tabs = [
   { id: "oils", key: "products.oils", path: "/oils", fields: ["name"] },
@@ -87,7 +88,9 @@ function SimpleMaster({ path, fields }: { path: string; fields: string[] }) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: [path], queryFn: () => api<any[]>(path) });
+  const [page, setPage] = useState(1);
   const [form, setForm] = useState<Record<string, string>>({});
+  const paged = paginate(data ?? [], page);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [assignedCode, setAssignedCode] = useState("");
 
@@ -154,7 +157,7 @@ function SimpleMaster({ path, fields }: { path: string; fields: string[] }) {
         </div>
       </Card>
       <Card>
-        {(data ?? []).map((r) => (
+        {paged.slice.map((r) => (
           <div key={r.id} className="flex items-center gap-3 border-b py-2 text-sm last:border-0">
             <div className="min-w-0 flex-1">
               {r.code} · {r.name || r.design}
@@ -169,6 +172,7 @@ function SimpleMaster({ path, fields }: { path: string; fields: string[] }) {
             />
           </div>
         ))}
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );
@@ -179,6 +183,8 @@ function BottlesMaster() {
   const qc = useQueryClient();
   const bottles = useQuery({ queryKey: ["/bottles"], queryFn: () => api<any[]>("/bottles") });
   const pumps = useQuery({ queryKey: ["/pumps"], queryFn: () => api<any[]>("/pumps") });
+  const [page, setPage] = useState(1);
+  const paged = paginate(bottles.data ?? [], page);
   const empty = { design: "Classic", sizeMl: 100, pumpId: "" };
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -296,7 +302,7 @@ function BottlesMaster() {
         </div>
       </Card>
       <Card>
-        {(bottles.data ?? []).map((b) => (
+        {paged.slice.map((b) => (
           <div key={b.id} className="flex items-center gap-3 border-b py-2 text-sm last:border-0">
             <BottlePhotoField
               compact
@@ -326,6 +332,7 @@ function BottlesMaster() {
             />
           </div>
         ))}
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );
@@ -396,6 +403,8 @@ function PackagingMaster() {
   const { t } = useI18n();
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["/packaging"], queryFn: () => api<any[]>("/packaging") });
+  const [page, setPage] = useState(1);
+  const paged = paginate(data ?? [], page);
   const empty = { name: "", type: "STANDARD_BOX" };
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -448,7 +457,7 @@ function PackagingMaster() {
         </div>
       </Card>
       <Card>
-        {(data ?? []).map((p) => (
+        {paged.slice.map((p) => (
           <div key={p.id} className="flex items-center gap-3 border-b py-2 text-sm last:border-0">
             <div className="min-w-0 flex-1">{p.code} · {p.name}</div>
             <CatalogRowActions
@@ -464,6 +473,7 @@ function PackagingMaster() {
             />
           </div>
         ))}
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );
@@ -473,6 +483,8 @@ function ReadyMaster() {
   const { t } = useI18n();
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["/products"], queryFn: () => api<any[]>("/products") });
+  const [page, setPage] = useState(1);
+  const paged = paginate(data ?? [], page);
   const empty = { name: "", brand: "", classification: "ORIGINAL", sizeMl: 100, barcode: "", sellingPrice: 0 };
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -532,7 +544,7 @@ function ReadyMaster() {
         </div>
       </Card>
       <Card>
-        {(data ?? []).map((p) => (
+        {paged.slice.map((p) => (
           <div key={p.id} className="flex items-center gap-3 border-b py-2 text-sm last:border-0">
             <div className="min-w-0 flex-1">
               {p.sku} · {p.name} · {p.classification}
@@ -557,6 +569,7 @@ function ReadyMaster() {
             />
           </div>
         ))}
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );
@@ -566,6 +579,8 @@ function OthersMaster() {
   const { t } = useI18n();
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["/others"], queryFn: () => api<any[]>("/others") });
+  const [page, setPage] = useState(1);
+  const paged = paginate(data ?? [], page);
   const empty = { name: "", sellingPrice: 0 };
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -618,7 +633,7 @@ function OthersMaster() {
         </div>
       </Card>
       <Card>
-        {(data ?? []).map((p) => (
+        {paged.slice.map((p) => (
           <div key={p.id} className="flex items-center gap-3 border-b py-2 text-sm last:border-0">
             <div className="min-w-0 flex-1">
               {p.sku} · {p.name}
@@ -636,6 +651,7 @@ function OthersMaster() {
             />
           </div>
         ))}
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );

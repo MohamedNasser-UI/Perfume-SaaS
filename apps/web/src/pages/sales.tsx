@@ -7,19 +7,30 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { canSeeItemCost } from "@/lib/staff-pages";
 import { useState } from "react";
+import { paginate, TablePager } from "@/components/table-pager";
 
 export function SalesListPage() {
   const { tenant } = useAuth();
   const { t, locale } = useI18n();
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
   const { data } = useQuery({
     queryKey: ["sales", q],
     queryFn: () => api<Array<{ id: string; orderNumber: string; createdAt: string; finalAmount: string; status: string; customer: { name: string; mobile: string }; paymentMethod: { name: string } }>>(`/sales?q=${encodeURIComponent(q)}`),
   });
+  const paged = paginate(data ?? [], page);
   return (
     <div>
       <PageHeader title={t("sales.title")} actions={<Link to="/sales/new"><Button>{t("sales.new")}</Button></Link>} />
-      <Input className="mb-4 max-w-sm" placeholder={t("sales.search")} value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input
+        className="mb-4 max-w-sm"
+        placeholder={t("sales.search")}
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setPage(1);
+        }}
+      />
       <Card className="overflow-auto p-0">
         <table className="w-full text-sm">
           <thead className="bg-stone-50 text-start">
@@ -33,7 +44,7 @@ export function SalesListPage() {
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map((o) => (
+            {paged.slice.map((o) => (
               <tr key={o.id} className="border-t">
                 <td className="p-3">
                   <Link className="font-medium text-gold" to={`/sales/${o.id}`}>{o.orderNumber}</Link>
@@ -47,6 +58,7 @@ export function SalesListPage() {
             ))}
           </tbody>
         </table>
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );

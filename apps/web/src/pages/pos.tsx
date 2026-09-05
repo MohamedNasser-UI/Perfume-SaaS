@@ -395,92 +395,201 @@ export function PosPage() {
       )}
 
       {readyOpen && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-          <Card className="max-h-[80vh] w-full max-w-lg overflow-auto">
-            <h2 className="font-serif text-2xl">{t("pos.readyMadeTitle")}</h2>
-            <div className="mt-4 space-y-2">
-              {(products.data ?? []).map((p) => (
+        <ReadyMadePicker
+          products={products.data ?? []}
+          finished={finished.data ?? []}
+          currency={ccy}
+          locale={locale}
+          onAddProduct={(p) => {
+            pos.addLine({
+              key: crypto.randomUUID(),
+              lineType: p.classification,
+              label: p.name,
+              qty: 1,
+              unitPrice: Number(p.sellingPrice),
+              productId: p.id,
+            });
+            setReadyOpen(false);
+          }}
+          onAddFinished={(f) => {
+            pos.addLine({
+              key: crypto.randomUUID(),
+              lineType: "FINISHED_CUSTOMIZED",
+              label: `Returned ${f.configuration.oil.name} ${f.configuration.bottleSizeMl}ml`,
+              qty: 1,
+              unitPrice: Number(f.sellingPrice),
+              finishedItemId: f.id,
+            });
+            setReadyOpen(false);
+          }}
+          onClose={() => setReadyOpen(false)}
+        />
+      )}
+
+      {othersOpen && (
+        <OthersPicker
+          items={others.data ?? []}
+          currency={ccy}
+          locale={locale}
+          onAdd={(p) => {
+            pos.addLine({
+              key: crypto.randomUUID(),
+              lineType: "OTHER",
+              label: p.name,
+              qty: 1,
+              unitPrice: Number(p.sellingPrice),
+              productId: p.id,
+            });
+            setOthersOpen(false);
+          }}
+          onClose={() => setOthersOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function matchesFilter(haystack: string, query: string) {
+  const q = query.trim().toLowerCase();
+  return !q || haystack.toLowerCase().includes(q);
+}
+
+type ReadyProduct = Catalog["products"][number];
+type FinishedItem = {
+  id: string;
+  sellingPrice: string;
+  configuration: { oil: { name: string }; bottleSizeMl: number };
+};
+
+function ReadyMadePicker({
+  products,
+  finished,
+  currency,
+  locale,
+  onAddProduct,
+  onAddFinished,
+  onClose,
+}: {
+  products: ReadyProduct[];
+  finished: FinishedItem[];
+  currency: string;
+  locale: "en" | "ar";
+  onAddProduct: (product: ReadyProduct) => void;
+  onAddFinished: (item: FinishedItem) => void;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const [q, setQ] = useState("");
+  const filteredProducts = useMemo(
+    () => products.filter((p) => matchesFilter(`${p.name} ${p.classification} ${p.barcode ?? ""}`, q)),
+    [products, q],
+  );
+  const filteredFinished = useMemo(
+    () =>
+      finished.filter((f) =>
+        matchesFilter(`${f.configuration.oil.name} ${t("pos.returned", { oil: f.configuration.oil.name })}`, q),
+      ),
+    [finished, q, t],
+  );
+  const empty = filteredProducts.length === 0 && filteredFinished.length === 0;
+
+  return (
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
+      <Card className="max-h-[80vh] w-full max-w-lg overflow-auto">
+        <h2 className="font-serif text-2xl">{t("pos.readyMadeTitle")}</h2>
+        <Input
+          autoFocus
+          className="mt-4"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("pos.filter")}
+        />
+        <div className="mt-4 space-y-2">
+          {empty ? (
+            <p className="text-sm text-stone-500">{t("pos.noMatches")}</p>
+          ) : (
+            <>
+              {filteredProducts.map((p) => (
                 <button
                   key={p.id}
                   className="flex w-full items-center justify-between rounded-xl border p-3 text-start hover:bg-stone-50"
-                  onClick={() => {
-                    pos.addLine({
-                      key: crypto.randomUUID(),
-                      lineType: p.classification,
-                      label: p.name,
-                      qty: 1,
-                      unitPrice: Number(p.sellingPrice),
-                      productId: p.id,
-                    });
-                    setReadyOpen(false);
-                  }}
+                  onClick={() => onAddProduct(p)}
                 >
                   <span>
                     {p.name} · {p.classification}
                   </span>
-                  <span>{money(Number(p.sellingPrice), ccy, locale)}</span>
+                  <span>{money(Number(p.sellingPrice), currency, locale)}</span>
                 </button>
               ))}
-              {(finished.data ?? []).map((f) => (
+              {filteredFinished.map((f) => (
                 <button
                   key={f.id}
                   className="flex w-full items-center justify-between rounded-xl border p-3 text-start hover:bg-stone-50"
-                  onClick={() => {
-                    pos.addLine({
-                      key: crypto.randomUUID(),
-                      lineType: "FINISHED_CUSTOMIZED",
-                      label: `Returned ${f.configuration.oil.name} ${f.configuration.bottleSizeMl}ml`,
-                      qty: 1,
-                      unitPrice: Number(f.sellingPrice),
-                      finishedItemId: f.id,
-                    });
-                    setReadyOpen(false);
-                  }}
+                  onClick={() => onAddFinished(f)}
                 >
                   <span>{t("pos.returned", { oil: f.configuration.oil.name })}</span>
-                  <span>{money(Number(f.sellingPrice), ccy, locale)}</span>
+                  <span>{money(Number(f.sellingPrice), currency, locale)}</span>
                 </button>
               ))}
-            </div>
-            <Button className="mt-4" variant="ghost" onClick={() => setReadyOpen(false)}>
-              {t("close")}
-            </Button>
-          </Card>
+            </>
+          )}
         </div>
-      )}
+        <Button className="mt-4" variant="ghost" onClick={onClose}>
+          {t("close")}
+        </Button>
+      </Card>
+    </div>
+  );
+}
 
-      {othersOpen && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-          <Card className="max-h-[80vh] w-full max-w-lg overflow-auto">
-            <h2 className="font-serif text-2xl">{t("pos.othersTitle")}</h2>
-            <div className="mt-4 space-y-2">
-              {(others.data ?? []).map((p) => (
-                <button
-                  key={p.id}
-                  className="flex w-full items-center justify-between rounded-xl border p-3 text-start hover:bg-stone-50"
-                  onClick={() => {
-                    pos.addLine({
-                      key: crypto.randomUUID(),
-                      lineType: "OTHER",
-                      label: p.name,
-                      qty: 1,
-                      unitPrice: Number(p.sellingPrice),
-                      productId: p.id,
-                    });
-                    setOthersOpen(false);
-                  }}
-                >
-                  <span>{p.name}</span>
-                  <span>{money(Number(p.sellingPrice), ccy, locale)}</span>
-                </button>
-              ))}
-            </div>
-            <Button className="mt-4" variant="ghost" onClick={() => setOthersOpen(false)}>
-              {t("close")}
-            </Button>
-          </Card>
+function OthersPicker({
+  items,
+  currency,
+  locale,
+  onAdd,
+  onClose,
+}: {
+  items: Catalog["others"];
+  currency: string;
+  locale: "en" | "ar";
+  onAdd: (item: Catalog["others"][number]) => void;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => items.filter((p) => matchesFilter(p.name, q)), [items, q]);
+
+  return (
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
+      <Card className="max-h-[80vh] w-full max-w-lg overflow-auto">
+        <h2 className="font-serif text-2xl">{t("pos.othersTitle")}</h2>
+        <Input
+          autoFocus
+          className="mt-4"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("pos.filter")}
+        />
+        <div className="mt-4 space-y-2">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-stone-500">{t("pos.noMatches")}</p>
+          ) : (
+            filtered.map((p) => (
+              <button
+                key={p.id}
+                className="flex w-full items-center justify-between rounded-xl border p-3 text-start hover:bg-stone-50"
+                onClick={() => onAdd(p)}
+              >
+                <span>{p.name}</span>
+                <span>{money(Number(p.sellingPrice), currency, locale)}</span>
+              </button>
+            ))
+          )}
         </div>
-      )}
+        <Button className="mt-4" variant="ghost" onClick={onClose}>
+          {t("close")}
+        </Button>
+      </Card>
     </div>
   );
 }

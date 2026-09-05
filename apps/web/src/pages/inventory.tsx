@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/locales";
 import { canSeeItemCost } from "@/lib/staff-pages";
+import { paginate, TablePager } from "@/components/table-pager";
 
 type ItemType =
   | "OIL"
@@ -104,6 +105,7 @@ export function InventoryPage() {
   const [category, setCategory] = useState<"ALL" | ItemType>("ALL");
   const [subcategory, setSubcategory] = useState("ALL");
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
 
   function typeLabel(type: ItemType) {
     const found = CATEGORIES.find((c) => c.id === type);
@@ -146,9 +148,11 @@ export function InventoryPage() {
       });
   }, [byCategory, subcategory, q]);
 
+  const paged = paginate(filtered, page);
+
   const groups = useMemo(() => {
     const grouped = new Map<string, InventoryRow[]>();
-    for (const row of filtered) {
+    for (const row of paged.slice) {
       const sub = subcategoryOf(row);
       const key = category === "ALL" ? (sub ? `${row.itemType}::${sub}` : row.itemType) : (sub ?? row.itemType);
       const bucket = grouped.get(key) ?? [];
@@ -168,7 +172,7 @@ export function InventoryPage() {
       }
       return { key, title, rows: list, hasSizes, qty, unit: String(first.unit).toLowerCase() };
     });
-  }, [filtered, category, subcategory, locale]);
+  }, [paged.slice, category, subcategory, locale]);
 
   const showSize = filtered.some((r) => sizeOf(r));
   const colCount = 3 + (showSize ? 1 : 0) + (seeCost ? 2 : 0);
@@ -202,6 +206,7 @@ export function InventoryPage() {
               onClick={() => {
                 setCategory(c.id);
                 setSubcategory("ALL");
+                setPage(1);
               }}
             >
               {t(c.key)}
@@ -213,7 +218,14 @@ export function InventoryPage() {
 
       {subOptions.length > 0 ? (
         <div className="mb-4 flex flex-wrap gap-2">
-          <Chip accent selected={subcategory === "ALL"} onClick={() => setSubcategory("ALL")}>
+          <Chip
+            accent
+            selected={subcategory === "ALL"}
+            onClick={() => {
+              setSubcategory("ALL");
+              setPage(1);
+            }}
+          >
             {t("inventory.all")}
           </Chip>
           {subOptions.map((opt) => {
@@ -221,7 +233,15 @@ export function InventoryPage() {
             const label = sample ? subLabel(sample.itemType, opt) : opt;
             const count = byCategory.filter((r) => subcategoryOf(r) === opt).length;
             return (
-              <Chip key={opt} accent selected={subcategory === opt} onClick={() => setSubcategory(opt)}>
+              <Chip
+                key={opt}
+                accent
+                selected={subcategory === opt}
+                onClick={() => {
+                  setSubcategory(opt);
+                  setPage(1);
+                }}
+              >
                 {label}
                 <span className={`ms-2 text-xs ${subcategory === opt ? "text-amber-100" : "text-stone-400"}`}>{count}</span>
               </Chip>
@@ -230,7 +250,15 @@ export function InventoryPage() {
         </div>
       ) : null}
 
-      <Input className="mb-4 max-w-sm" placeholder={t("search")} value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input
+        className="mb-4 max-w-sm"
+        placeholder={t("search")}
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          setPage(1);
+        }}
+      />
 
       <Card className="overflow-auto p-0">
         {filtered.length === 0 ? (
@@ -279,6 +307,7 @@ export function InventoryPage() {
             </tbody>
           </table>
         )}
+        <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
   );

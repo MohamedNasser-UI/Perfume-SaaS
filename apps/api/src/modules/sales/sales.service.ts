@@ -286,7 +286,6 @@ export class SalesService {
         lines: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 100,
     });
   }
 
