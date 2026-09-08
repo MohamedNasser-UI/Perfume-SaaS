@@ -74,12 +74,18 @@ export function SaleDetailPage() {
     queryFn: () => api<any>(`/sales/${id}`),
   });
   if (!data) return <div>{t("loading")}</div>;
+  const received = Number(data.amountReceived || data.finalAmount);
+  const change = Number(data.changeAmount ?? 0);
   return (
     <div>
       <PageHeader title={data.orderNumber} subtitle={`${data.customer.name} · ${data.customer.mobile}`} />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          {(data.lines as any[]).map((l) => (
+          {(data.lines as any[]).map((l) => {
+            const original = Number(l.lineTotal);
+            const allocated = Number(l.discountAmount ?? 0);
+            const net = allocated > 0 || Number(l.netLineTotal ?? 0) > 0 ? Number(l.netLineTotal ?? 0) : original;
+            return (
             <div key={l.id} className="mb-4 border-b pb-3 last:border-0">
               <div className="font-semibold">{l.lineType}</div>
               {l.configuration && (
@@ -103,17 +109,41 @@ export function SaleDetailPage() {
                 {seeCost
                   ? t("sales.costPrice", {
                       cost: money(Number(l.costAtSale), tenant?.currency, locale),
-                      price: money(Number(l.lineTotal), tenant?.currency, locale),
+                      price: money(net, tenant?.currency, locale),
                     })
                   : t("sales.linePrice", {
-                      price: money(Number(l.lineTotal), tenant?.currency, locale),
+                      price: money(net, tenant?.currency, locale),
                     })}
+                {allocated > 0 ? (
+                  <div className="text-stone-500">
+                    {money(original, tenant?.currency, locale)} · {t("sales.lineDiscount", { amount: money(allocated, tenant?.currency, locale) })}
+                  </div>
+                ) : null}
               </div>
             </div>
-          ))}
-          <div className="flex justify-between font-semibold">
-            <span>{t("total")}</span>
-            <span>{money(Number(data.finalAmount), tenant?.currency, locale)}</span>
+            );
+          })}
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>{t("pos.subtotal")}</span>
+              <span>{money(Number(data.subtotal ?? data.finalAmount), tenant?.currency, locale)}</span>
+            </div>
+            <div className="flex justify-between text-stone-500">
+              <span>{t("pos.discount")}</span>
+              <span>- {money(Number(data.discountAmount ?? 0), tenant?.currency, locale)}</span>
+            </div>
+            <div className="flex justify-between font-semibold">
+              <span>{t("sales.netTotal")}</span>
+              <span>{money(Number(data.finalAmount), tenant?.currency, locale)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>{t("sales.amountReceived")}</span>
+              <span>{money(received, tenant?.currency, locale)}</span>
+            </div>
+            <div className="flex justify-between text-stone-500">
+              <span>{t("sales.change")}</span>
+              <span>{money(change, tenant?.currency, locale)}</span>
+            </div>
           </div>
         </Card>
         <Card>

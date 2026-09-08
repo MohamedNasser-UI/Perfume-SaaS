@@ -108,8 +108,18 @@ export function PosPage() {
   );
 
   const subtotal = pos.lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
-  const discountAmt = subtotal * (pos.discountPct / 100);
-  const total = subtotal - discountAmt;
+  const received =
+    pos.tenderMode === "manual" && pos.amountReceived != null
+      ? pos.amountReceived
+      : pos.tenderMode === "preset"
+        ? Math.round(subtotal * (1 - pos.discountPct / 100) * 100) / 100
+        : Math.round(subtotal * 100) / 100;
+  const discountAmt = Math.max(0, Math.round((subtotal - received) * 100) / 100);
+  const netTotal = Math.round((subtotal - discountAmt) * 100) / 100;
+  const changeAmt = Math.max(0, Math.round((received - subtotal) * 100) / 100);
+  const maxDiscountPct = Math.max(0, ...(settings.data?.discounts.filter((d) => d.active).map((d) => Number(d.percentage)) ?? [0]));
+  const discountPctUsed = subtotal > 0 ? (discountAmt / subtotal) * 100 : 0;
+  const discountTooHigh = discountPctUsed > maxDiscountPct + 0.01;
 
   async function findCustomer() {
     const found = await api<{ id: string; name: string; mobile: string } | null>(
@@ -139,6 +149,7 @@ export function PosPage() {
       if (!pos.customer) throw new Error(t("pos.needCustomer"));
       if (!pos.lines.length) throw new Error(t("pos.needLine"));
       if (!pos.paymentMethodId) throw new Error(t("pos.needPayment"));
+      if (discountTooHigh) throw new Error(t("pos.discountTooHigh"));
       const lines = pos.lines.map((l) => {
         if (l.lineType === "CUSTOMIZED") {
           return { lineType: "CUSTOMIZED" as const, quantity: l.qty, ...l.payload };
@@ -154,6 +165,7 @@ export function PosPage() {
           customerId: pos.customer.id,
           discountId: pos.discountId,
           paymentMethodId: pos.paymentMethodId,
+          amountReceived: received,
           lines,
         }),
       });
@@ -356,9 +368,26 @@ export function PosPage() {
             </div>
           </div>
           <div className="flex justify-between font-serif text-2xl">
-            <span>{t("total")}</span>
-            <span>{money(total, ccy, locale)}</span>
+            <span>{t("pos.netTotal")}</span>
+            <span>{money(netTotal, ccy, locale)}</span>
           </div>
+          <div>
+            <Label>{t("pos.amountReceived")}</Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={Number.isFinite(received) ? received : ""}
+              onChange={(e) => pos.setAmountReceived(Number(e.target.value))}
+            />
+          </div>
+          <div className="flex justify-between text-stone-500">
+            <span>{t("pos.change")}</span>
+            <span>{money(changeAmt, ccy, locale)}</span>
+          </div>
+          {discountTooHigh ? (
+            <p className="text-sm text-red-700">{t("pos.discountTooHigh")}</p>
+          ) : null}
           <div className="flex gap-2">
             {settings.data?.paymentMethods.filter((p) => p.active).map((p) => (
               <Button
@@ -372,7 +401,7 @@ export function PosPage() {
               </Button>
             ))}
           </div>
-          <Button className="w-full py-3" disabled={complete.isPending} onClick={() => complete.mutate()}>
+          <Button className="w-full py-3" disabled={complete.isPending || discountTooHigh} onClick={() => complete.mutate()}>
             {t("pos.completeSale")}
           </Button>
         </div>

@@ -323,6 +323,7 @@ export const createSaleSchema = z.object({
   discountId: z.string().optional(),
   paymentMethodId: z.string().min(1),
   paymentReference: z.string().optional(),
+  amountReceived: z.number().nonnegative().optional(),
   lines: z.array(saleLineSchema).min(1),
 });
 

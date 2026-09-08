@@ -4,6 +4,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { D, Decimal, money, qty } from "../../common/money";
 import { toStockQuantity, toStockUnitCost } from "../../common/units";
 import { nextNumber } from "../../common/sequences";
+import { reverseInboundBalance } from "./reverse-inbound";
 
 export type MovementInput = {
   tenantId: string;
@@ -110,6 +111,62 @@ export class InventoryService {
         referenceId: input.referenceId,
         balanceAfter: newQty.toFixed(4),
         reason: input.reason,
+        createdById: input.createdById,
+      },
+    });
+  }
+
+  async reversePurchaseReceipt(
+    tx: Prisma.TransactionClient,
+    input: {
+      tenantId: string;
+      outletId: string;
+      itemId: string;
+      stockQuantity: Decimal.Value;
+      stockUnitCost: Decimal.Value;
+      referenceId: string;
+      createdById: string;
+      reason?: string;
+    },
+  ) {
+    const item = await tx.inventoryItem.findFirst({
+      where: { id: input.itemId, tenantId: input.tenantId },
+    });
+    if (!item) throw new BadRequestException("Inventory item not found");
+
+    const balance = await this.getOrCreateBalance(tx, input.tenantId, input.outletId, input.itemId);
+    const take = D(input.stockQuantity);
+    const { newQty, newAvg, newValue } = reverseInboundBalance(
+      balance.quantityOnHand,
+      balance.averageCost,
+      take,
+      input.stockUnitCost,
+    );
+    const unitCost = D(input.stockUnitCost);
+
+    await tx.inventoryBalance.update({
+      where: { id: balance.id },
+      data: {
+        quantityOnHand: newQty.toFixed(4),
+        averageCost: newAvg.toFixed(6),
+        inventoryValue: newValue.toFixed(4),
+      },
+    });
+
+    return tx.inventoryMovement.create({
+      data: {
+        tenantId: input.tenantId,
+        outletId: input.outletId,
+        itemId: input.itemId,
+        movementType: "PURCHASE_RECEIPT",
+        quantity: take.neg().toFixed(4),
+        unit: item.stockUnit,
+        unitCost: unitCost.toFixed(6),
+        totalCost: take.mul(unitCost).toFixed(4),
+        referenceType: "PURCHASE",
+        referenceId: input.referenceId,
+        balanceAfter: newQty.toFixed(4),
+        reason: input.reason ?? "purchase edit",
         createdById: input.createdById,
       },
     });

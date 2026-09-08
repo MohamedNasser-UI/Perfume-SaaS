@@ -33,7 +33,9 @@ export function ReportsPage() {
       <Card>
         {kind === "sales" && data?.summary && (
           <div className="grid gap-3 sm:grid-cols-3">
-            <Stat label={t("reports.revenue")} value={money(data.summary.revenue, tenant?.currency, locale)} />
+            <Stat label={t("reports.grossSales")} value={money(data.summary.grossSales ?? data.summary.revenue, tenant?.currency, locale)} />
+            <Stat label={t("reports.discounts")} value={money(data.summary.discounts ?? 0, tenant?.currency, locale)} />
+            <Stat label={t("reports.netSales")} value={money(data.summary.revenue, tenant?.currency, locale)} />
             <Stat label={t("reports.orders")} value={String(data.summary.orders)} />
             <Stat label={t("reports.grossProfit")} value={money(data.summary.grossProfit, tenant?.currency, locale)} />
           </div>

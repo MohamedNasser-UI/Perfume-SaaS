@@ -141,6 +141,7 @@ export async function flushOutbox() {
 
 export function mutationTypeFor(method: string, path: string): string | null {
   const [base, id] = splitPath(path);
+  // SALE payload is the POS POST body, including amountReceived when present.
   if (method === "POST" && base === "/sales") return "SALE";
   if (method === "POST" && base === "/customers") return "CUSTOMER";
   if (method === "POST" && base === "/purchases") return "PURCHASE";

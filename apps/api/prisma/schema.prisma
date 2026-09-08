@@ -229,6 +229,7 @@ model User {
   tenant             Tenant?            @relation(fields: [tenantId], references: [id])
   outlets            UserOutlet[]
   createdPurchases   PurchaseInvoice[]  @relation("PurchaseCreatedBy")
+  updatedPurchases   PurchaseInvoice[]  @relation("PurchaseUpdatedBy")
   createdPayments    SupplierPayment[]  @relation("PaymentCreatedBy")
   createdSales       SalesOrder[]       @relation("SaleCreatedBy")
   createdReturns     Return[]           @relation("ReturnCreatedBy")
@@ -699,11 +700,14 @@ model PurchaseInvoice {
   notes         String?
   createdById   String         @map("created_by")
   createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at")
+  updatedById   String?        @map("updated_by")
 
   tenant    Tenant                 @relation(fields: [tenantId], references: [id])
   outlet    Outlet                 @relation(fields: [outletId], references: [id])
   supplier  Supplier               @relation(fields: [supplierId], references: [id])
   createdBy User                   @relation("PurchaseCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?                  @relation("PurchaseUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   lines     PurchaseInvoiceLine[]
   ledger    SupplierLedger[]
 
@@ -785,6 +789,8 @@ model SalesOrder {
   discountPercentage Decimal   @default(0) @map("discount_percentage") @db.Decimal(6, 2)
   discountAmount     Decimal   @default(0) @map("discount_amount") @db.Decimal(18, 4)
   finalAmount        Decimal   @map("final_amount") @db.Decimal(18, 4)
+  amountReceived     Decimal   @default(0) @map("amount_received") @db.Decimal(18, 4)
+  changeAmount       Decimal   @default(0) @map("change_amount") @db.Decimal(18, 4)
   materialCost       Decimal   @map("material_cost") @db.Decimal(18, 4)
   grossProfit        Decimal   @map("gross_profit") @db.Decimal(18, 4)
   paymentMethodId    String    @map("payment_method_id")
@@ -817,6 +823,8 @@ model SalesOrderLine {
   quantity        Int
   unitPrice       Decimal  @map("unit_price") @db.Decimal(18, 4)
   lineTotal       Decimal  @map("line_total") @db.Decimal(18, 4)
+  discountAmount  Decimal  @default(0) @map("discount_amount") @db.Decimal(18, 4)
+  netLineTotal    Decimal  @default(0) @map("net_line_total") @db.Decimal(18, 4)
   costAtSale      Decimal  @map("cost_at_sale") @db.Decimal(18, 4)
   returnedQty     Int      @default(0) @map("returned_qty")
 

@@ -5,6 +5,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { InventoryService } from "../inventory/inventory.service";
 import { D, Decimal, money, qty } from "../../common/money";
 import { nextNumber } from "../../common/sequences";
+import { allocateLineDiscounts, settleTender } from "./sale-tender";
 
 type BuiltCustom = {
   oilId: string;
@@ -73,6 +74,9 @@ export class SalesService {
 
       const pricing = await tx.pricingConfiguration.findUnique({ where: { tenantId } });
       if (!pricing) throw new BadRequestException("Markup is not configured");
+
+      const activeDiscounts = await tx.discountConfiguration.findMany({ where: { tenantId, active: true } });
+      const maxDiscountPct = activeDiscounts.reduce((max, d) => Decimal.max(max, D(d.percentage)), D(0));
 
       const prepared: {
         lineType: CreateSaleInput["lines"][number]["lineType"];
@@ -152,9 +156,22 @@ export class SalesService {
 
       const subtotal = prepared.reduce((sum, l) => sum.add(l.unitPrice.mul(l.quantity)), D(0));
       const materialCost = prepared.reduce((sum, l) => sum.add(l.costAtSale.mul(l.quantity)), D(0));
-      const discountAmount = subtotal.mul(discountPct).div(100);
-      const finalAmount = subtotal.sub(discountAmount);
-      const grossProfit = finalAmount.sub(materialCost);
+      const tender = settleTender({
+        subtotal,
+        amountReceived: input.amountReceived,
+        presetDiscountPct: discountPct,
+        maxDiscountPct,
+      });
+      const lineGross = prepared.map((l) => l.unitPrice.mul(l.quantity));
+      const lineDiscounts = allocateLineDiscounts(lineGross, tender.discountAmount);
+      const storedDiscountId = (() => {
+        if (tender.discountAmount.eq(0)) return undefined;
+        const matchPct = (percentage: Decimal.Value) => D(percentage).toDecimalPlaces(2).eq(tender.discountPercentage);
+        const chosen = discountId ? activeDiscounts.find((d) => d.id === discountId) : undefined;
+        if (chosen && matchPct(chosen.percentage)) return chosen.id;
+        return activeDiscounts.find((d) => matchPct(d.percentage))?.id;
+      })();
+      const grossProfit = tender.finalAmount.sub(materialCost);
       const orderNumber = await nextNumber(tx, outletId, "SALE");
 
       const order = await tx.salesOrder.create({
@@ -164,10 +181,12 @@ export class SalesService {
           customerId: customer.id,
           orderNumber,
           subtotal: subtotal.toFixed(4),
-          discountId,
-          discountPercentage: discountPct.toFixed(2),
-          discountAmount: discountAmount.toFixed(4),
-          finalAmount: finalAmount.toFixed(4),
+          discountId: storedDiscountId,
+          discountPercentage: tender.discountPercentage.toFixed(2),
+          discountAmount: tender.discountAmount.toFixed(4),
+          finalAmount: tender.finalAmount.toFixed(4),
+          amountReceived: tender.amountReceived.toFixed(4),
+          changeAmount: tender.changeAmount.toFixed(4),
           materialCost: materialCost.toFixed(4),
           grossProfit: grossProfit.toFixed(4),
           paymentMethodId: payment.id,
@@ -177,7 +196,10 @@ export class SalesService {
         },
       });
 
-      for (const line of prepared) {
+      for (const [index, line] of prepared.entries()) {
+        const lineTotal = line.unitPrice.mul(line.quantity);
+        const lineDiscount = lineDiscounts[index] ?? D(0);
+        const netLineTotal = lineTotal.sub(lineDiscount);
         const created = await tx.salesOrderLine.create({
           data: {
             salesOrderId: order.id,
@@ -186,7 +208,9 @@ export class SalesService {
             finishedItemId: line.finishedItemId,
             quantity: line.quantity,
             unitPrice: line.unitPrice.toFixed(4),
-            lineTotal: line.unitPrice.mul(line.quantity).toFixed(4),
+            lineTotal: lineTotal.toFixed(4),
+            discountAmount: lineDiscount.toFixed(4),
+            netLineTotal: netLineTotal.toFixed(4),
             costAtSale: line.costAtSale.mul(line.quantity).toFixed(4),
           },
         });

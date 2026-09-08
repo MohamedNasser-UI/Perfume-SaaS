@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { D, money } from "../../common/money";
+import { lineNetTotal } from "../sales/sale-tender";
 
 @Injectable()
 export class ReportsService {
@@ -15,7 +16,7 @@ export class ReportsService {
       await Promise.all([
         this.prisma.salesOrder.aggregate({
           where: todayFilter,
-          _sum: { finalAmount: true, discountAmount: true, grossProfit: true, materialCost: true },
+          _sum: { finalAmount: true, discountAmount: true, grossProfit: true, materialCost: true, subtotal: true },
         }),
         this.prisma.salesOrder.count({ where: todayFilter }),
         this.prisma.inventoryBalance.aggregate({
@@ -68,6 +69,7 @@ export class ReportsService {
 
     const revenue = money(todayAgg._sum.finalAmount ?? 0);
     const profit = money(todayAgg._sum.grossProfit ?? 0);
+    const grossSales = money(todayAgg._sum.subtotal ?? 0);
 
     const last7 = [];
     for (let i = 6; i >= 0; i--) {
@@ -88,11 +90,15 @@ export class ReportsService {
       });
     }
 
-    const byType = await this.prisma.salesOrderLine.groupBy({
-      by: ["lineType"],
-      where: { order: { tenantId, outletId, createdAt: { gte: start } } },
-      _sum: { lineTotal: true },
+    const todayLines = await this.prisma.salesOrderLine.findMany({
+      where: { order: todayFilter },
+      select: { lineType: true, lineTotal: true, netLineTotal: true, discountAmount: true },
     });
+    const byTypeMap = new Map<string, ReturnType<typeof D>>();
+    for (const line of todayLines) {
+      const current = byTypeMap.get(line.lineType) ?? D(0);
+      byTypeMap.set(line.lineType, current.add(lineNetTotal(line)));
+    }
 
     const oilConsumption = await this.prisma.inventoryMovement.aggregate({
       where: {
@@ -107,6 +113,7 @@ export class ReportsService {
 
     return {
       sales: {
+        grossSales,
         revenue,
         orders: todayCount,
         averageOrderValue: todayCount ? money(revenue / todayCount) : 0,
@@ -136,7 +143,7 @@ export class ReportsService {
       },
       charts: {
         last7,
-        byType: byType.map((t) => ({ type: t.lineType, total: money(t._sum.lineTotal ?? 0) })),
+        byType: [...byTypeMap.entries()].map(([type, total]) => ({ type, total: money(total) })),
       },
     };
   }
@@ -156,15 +163,16 @@ export class ReportsService {
     });
     const agg = await this.prisma.salesOrder.aggregate({
       where,
-      _sum: { finalAmount: true, discountAmount: true, grossProfit: true, materialCost: true },
+      _sum: { finalAmount: true, discountAmount: true, grossProfit: true, materialCost: true, subtotal: true },
       _count: true,
       _avg: { finalAmount: true },
     });
     return {
       summary: {
         orders: agg._count,
-        revenue: money(agg._sum.finalAmount ?? 0),
+        grossSales: money(agg._sum.subtotal ?? 0),
         discounts: money(agg._sum.discountAmount ?? 0),
+        revenue: money(agg._sum.finalAmount ?? 0),
         materialCost: money(agg._sum.materialCost ?? 0),
         grossProfit: money(agg._sum.grossProfit ?? 0),
         averageOrderValue: money(agg._avg.finalAmount ?? 0),
@@ -240,17 +248,23 @@ export class ReportsService {
   }
 
   async profitability(tenantId: string, outletId: string) {
-    const byType = await this.prisma.salesOrderLine.groupBy({
-      by: ["lineType"],
-      where: { order: { tenantId, outletId } },
-      _sum: { lineTotal: true, costAtSale: true },
+    const lines = await this.prisma.salesOrderLine.findMany({
+      where: { order: { tenantId, outletId, status: { not: "RETURNED" } } },
+      select: { lineType: true, lineTotal: true, netLineTotal: true, discountAmount: true, costAtSale: true },
     });
+    const byTypeMap = new Map<string, { revenue: ReturnType<typeof D>; cost: ReturnType<typeof D> }>();
+    for (const line of lines) {
+      const current = byTypeMap.get(line.lineType) ?? { revenue: D(0), cost: D(0) };
+      current.revenue = current.revenue.add(lineNetTotal(line));
+      current.cost = current.cost.add(D(line.costAtSale));
+      byTypeMap.set(line.lineType, current);
+    }
     return {
-      byType: byType.map((t) => {
-        const revenue = money(t._sum.lineTotal ?? 0);
-        const cost = money(t._sum.costAtSale ?? 0);
+      byType: [...byTypeMap.entries()].map(([type, totals]) => {
+        const revenue = money(totals.revenue);
+        const cost = money(totals.cost);
         return {
-          type: t.lineType,
+          type,
           revenue,
           cost,
           profit: money(revenue - cost),

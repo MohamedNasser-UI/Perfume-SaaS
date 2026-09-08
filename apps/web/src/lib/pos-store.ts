@@ -63,11 +63,14 @@ type PosState = {
   discountId?: string;
   discountPct: number;
   paymentMethodId?: string;
+  amountReceived?: number;
+  tenderMode: "auto" | "preset" | "manual";
   setCustomer: (c: Customer | null) => void;
   addLine: (line: PosLine) => void;
   removeLine: (key: string) => void;
   setLineQty: (key: string, qty: number, maxQty?: number) => void;
   setDiscount: (id: string | undefined, pct: number) => void;
+  setAmountReceived: (value: number) => void;
   setPayment: (id: string) => void;
   clear: () => void;
 };
@@ -76,6 +79,7 @@ export const usePos = create<PosState>((set) => ({
   customer: null,
   lines: [],
   discountPct: 0,
+  tenderMode: "auto",
   setCustomer: (customer) => set({ customer }),
   addLine: (line) => set((s) => ({ lines: [...s.lines, line] })),
   removeLine: (key) => set((s) => ({ lines: s.lines.filter((l) => l.key !== key) })),
@@ -90,7 +94,29 @@ export const usePos = create<PosState>((set) => ({
         return { ...line, qty: next };
       }),
     })),
-  setDiscount: (discountId, discountPct) => set({ discountId, discountPct }),
+  setDiscount: (discountId, discountPct) =>
+    set({
+      discountId,
+      discountPct,
+      tenderMode: discountId ? "preset" : "auto",
+      amountReceived: undefined,
+    }),
+  setAmountReceived: (amountReceived) =>
+    set({
+      amountReceived,
+      tenderMode: "manual",
+      discountId: undefined,
+      discountPct: 0,
+    }),
   setPayment: (paymentMethodId) => set({ paymentMethodId }),
-  clear: () => set({ customer: null, lines: [], discountId: undefined, discountPct: 0, paymentMethodId: undefined }),
+  clear: () =>
+    set({
+      customer: null,
+      lines: [],
+      discountId: undefined,
+      discountPct: 0,
+      paymentMethodId: undefined,
+      amountReceived: undefined,
+      tenderMode: "auto",
+    }),
 }));

@@ -10,7 +10,11 @@ import { THEMES, type ThemeId } from "@/lib/themes";
 import type { MessageKey } from "@/lib/locales";
 import { cn } from "@/lib/utils";
 import { pendingOutbox } from "@/lib/sync";
+import { checkLicense } from "@/lib/license";
 import { DEFAULT_STAFF_PAGES, STAFF_PAGES, type StaffPage } from "@/lib/staff-pages";
+
+/** Set true to restore the Settings till roster (heading, last seen, users). */
+const SHOW_DEVICE_LIST = false;
 
 export function SettingsPage() {
   const { t } = useI18n();
@@ -566,7 +570,7 @@ function DiscountRow({
 }
 
 function DevicesCard() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { authorizedUsers, online } = useAuth();
   const devices = useQuery({
     queryKey: ["devices"],
@@ -580,33 +584,49 @@ function DevicesCard() {
           users: { displayName: string; role: string; email: string }[];
         }[]
       >("/devices"),
-    enabled: online,
+    enabled: SHOW_DEVICE_LIST && online,
   });
   const pending = useQuery({ queryKey: ["outbox-pending"], queryFn: pendingOutbox, refetchInterval: 8000 });
+  const license = useQuery({ queryKey: ["local-license"], queryFn: () => checkLicense() });
+  const licenseUntil =
+    license.data?.ok
+      ? new Date(license.data.license.payload.expiresAt).toLocaleString(locale === "ar" ? "ar-EG" : "en-GB")
+      : "—";
 
   return (
     <Card className="space-y-2 lg:col-span-2">
-      <h3 className="font-semibold">{t("settings.devices")}</h3>
-      <p className="text-xs text-stone-500">{t("settings.devicesHint")}</p>
+      {SHOW_DEVICE_LIST ? (
+        <>
+          <h3 className="font-semibold">{t("settings.devices")}</h3>
+          <p className="text-xs text-stone-500">{t("settings.devicesHint")}</p>
+        </>
+      ) : null}
       <div className="text-sm">
         {t("settings.pendingOutbox")}: {pending.data?.length ?? 0}
       </div>
-      {(devices.data ?? []).map((d) => (
-        <div key={d.id} className="border-t py-2 text-sm">
-          <div className="font-medium">{d.label || d.id}</div>
-          <div className="text-xs text-stone-500">
-            {t("settings.lastSeen")}: {new Date(d.lastSeenAt).toLocaleString()} · {t("settings.licenseUntil")}:{" "}
-            {d.lastLicenseExpiresAt ? new Date(d.lastLicenseExpiresAt).toLocaleString() : "—"}
-          </div>
-          <div className="text-xs text-stone-500">
-            {d.users.map((u) => `${u.displayName} (${u.role})`).join(" · ")}
-          </div>
-        </div>
-      ))}
-      {!devices.data?.length ? (
-        <div className="text-xs text-stone-500">
-          {authorizedUsers.map((u) => u.displayName).join(" · ") || t("none")}
-        </div>
+      <div className="text-sm">
+        {t("settings.licenseUntil")}: {licenseUntil}
+      </div>
+      {SHOW_DEVICE_LIST ? (
+        <>
+          {(devices.data ?? []).map((d) => (
+            <div key={d.id} className="border-t py-2 text-sm">
+              <div className="font-medium">{d.label || d.id}</div>
+              <div className="text-xs text-stone-500">
+                {t("settings.lastSeen")}: {new Date(d.lastSeenAt).toLocaleString()} · {t("settings.licenseUntil")}:{" "}
+                {d.lastLicenseExpiresAt ? new Date(d.lastLicenseExpiresAt).toLocaleString() : "—"}
+              </div>
+              <div className="text-xs text-stone-500">
+                {d.users.map((u) => `${u.displayName} (${u.role})`).join(" · ")}
+              </div>
+            </div>
+          ))}
+          {!devices.data?.length ? (
+            <div className="text-xs text-stone-500">
+              {authorizedUsers.map((u) => u.displayName).join(" · ") || t("none")}
+            </div>
+          ) : null}
+        </>
       ) : null}
     </Card>
   );

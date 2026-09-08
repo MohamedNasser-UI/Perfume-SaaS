@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { purchaseInvoiceSchema } from "@perfume/validation";
 import { ProcurementService } from "./procurement.service";
 import { CurrentUser, OutletId, RequestUser, TenantId } from "../../common/context";
-import { RequirePage } from "../../common/guards";
+import { RequirePage, Roles } from "../../common/guards";
 import { ZodPipe } from "../../common/zod-pipe";
 
 @RequirePage("procurement")
@@ -29,5 +29,18 @@ export class ProcurementController {
     body: Parameters<ProcurementService["create"]>[3],
   ) {
     return this.procurement.create(tenantId, outletId, user.id, body);
+  }
+
+  @Roles("OWNER")
+  @Patch(":id")
+  update(
+    @TenantId() tenantId: string,
+    @OutletId() outletId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("id") id: string,
+    @Body(new ZodPipe(purchaseInvoiceSchema))
+    body: Parameters<ProcurementService["update"]>[4],
+  ) {
+    return this.procurement.update(tenantId, outletId, user.id, id, body);
   }
 }

@@ -1,6 +1,6 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -217,22 +217,177 @@ export function NewPurchasePage() {
 
 export function PurchaseDetailPage() {
   const { id } = useParams();
-  const { tenant } = useAuth();
+  const { tenant, user } = useAuth();
   const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const canEdit = user?.role === "OWNER";
+  const suppliers = useQuery({ queryKey: ["suppliers"], queryFn: () => api<any[]>("/suppliers"), enabled: canEdit });
+  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<CatalogItem[]>("/catalog/items"), enabled: canEdit });
   const { data } = useQuery({ queryKey: ["purchase", id], queryFn: () => api<any>(`/purchases/${id}`) });
+  const pickerItems = useMemo(
+    () => (items.data ?? []).map((it) => ({ id: it.id, label: it.name, hint: it.code })),
+    [items.data],
+  );
+  const [supplierId, setSupplierId] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState(todayDate);
+  const [lines, setLines] = useState<PurchaseLine[]>([emptyLine()]);
+
+  useEffect(() => {
+    if (!data) return;
+    setSupplierId(data.supplierId ?? data.supplier?.id ?? "");
+    setInvoiceNumber(data.invoiceNumber ?? "");
+    setInvoiceDate(String(data.invoiceDate ?? "").slice(0, 10));
+    setLines(
+      (data.lines ?? []).map((l: any) => ({
+        itemId: l.itemId,
+        quantity: Number(l.quantity),
+        unit: asPurchaseUnit(l.unit),
+        unitCost: Number(l.unitCost),
+      })),
+    );
+  }, [data]);
+
+  function setLineItem(index: number, itemId: string) {
+    const catalogItem = (items.data ?? []).find((it) => it.id === itemId);
+    setLines(
+      lines.map((x, idx) =>
+        idx === index
+          ? { ...x, itemId, unit: catalogItem ? asPurchaseUnit(catalogItem.purchaseUnit) : x.unit }
+          : x,
+      ),
+    );
+  }
+
+  function removeLine(index: number) {
+    const next = lines.filter((_, idx) => idx !== index);
+    setLines(next.length ? next : [emptyLine()]);
+  }
+
+  const save = useMutation({
+    mutationFn: () => {
+      if (!navigator.onLine) throw new Error(t("settings.inviteOffline"));
+      return api(`/purchases/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          supplierId,
+          invoiceNumber,
+          invoiceDate,
+          lines: lines.filter((l) => l.itemId).map(({ itemId, quantity, unit, unitCost }) => ({ itemId, quantity, unit, unitCost })),
+        }),
+      });
+    },
+    onSuccess: (res: any) => {
+      toast.success(res.creditWarning ? t("proc.creditWarn") : t("proc.saved"));
+      void qc.invalidateQueries({ queryKey: ["purchase", id] });
+      void qc.invalidateQueries({ queryKey: ["purchases"] });
+      void qc.invalidateQueries({ queryKey: ["inventory"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (!data) return <div>{t("loading")}</div>;
+  const total = canEdit ? lines.reduce((s, l) => s + l.quantity * l.unitCost, 0) : Number(data.totalAmount);
+
   return (
     <div>
       <PageHeader title={data.number} subtitle={data.supplier.name} />
-      <Card>
-        {(data.lines ?? []).map((l: any) => (
-          <div key={l.id} className="flex justify-between border-b py-2 text-sm">
-            <span>{l.item.name} · {Number(l.quantity)} {l.unit}</span>
-            <span>{money(Number(l.lineTotal), tenant?.currency, locale)}</span>
+      {data.updatedBy?.displayName ? (
+        <p className="mb-3 text-sm text-stone-500">
+          {t("proc.updatedBy", { name: data.updatedBy.displayName, when: fmtDate(data.updatedAt, locale) })}
+        </p>
+      ) : null}
+      {!canEdit ? (
+        <Card>
+          <p className="mb-3 text-sm text-stone-500">{t("proc.editOwnerOnly")}</p>
+          {(data.lines ?? []).map((l: any) => (
+            <div key={l.id} className="flex justify-between border-b py-2 text-sm">
+              <span>{l.item.name} · {Number(l.quantity)} {l.unit}</span>
+              <span>{money(Number(l.lineTotal), tenant?.currency, locale)}</span>
+            </div>
+          ))}
+          <div className="mt-3 text-end font-semibold">{money(Number(data.totalAmount), tenant?.currency, locale)}</div>
+        </Card>
+      ) : (
+        <Card className="space-y-3">
+          <Label>{t("proc.supplier")}</Label>
+          <Select value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+            <option value="">{t("select")}</option>
+            {(suppliers.data ?? []).map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>{t("proc.invoiceNo")}</Label>
+              <Input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+            </div>
+            <div>
+              <Label>{t("date")}</Label>
+              <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+            </div>
           </div>
-        ))}
-        <div className="mt-3 text-end font-semibold">{money(Number(data.totalAmount), tenant?.currency, locale)}</div>
-      </Card>
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-black px-2 py-2 text-sm font-medium text-white sm:grid-cols-5">
+            <span>{t("proc.item")}</span>
+            <span>{t("proc.qty")}</span>
+            <span>{t("proc.unit")}</span>
+            <span>{t("proc.unitCost")}</span>
+            <span>{t("proc.action")}</span>
+          </div>
+          {lines.map((l, i) => (
+            <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <SearchSelect
+                items={pickerItems}
+                value={l.itemId}
+                onChange={(itemId) => setLineItem(i, itemId)}
+                placeholder={t("proc.searchItems")}
+                emptyLabel={t("proc.noItemMatches")}
+              />
+              <Input
+                type="number"
+                min={0}
+                value={l.quantity}
+                onChange={(e) => setLines(lines.map((x, idx) => (idx === i ? { ...x, quantity: Number(e.target.value) } : x)))}
+              />
+              <Select
+                value={l.unit}
+                onChange={(e) =>
+                  setLines(lines.map((x, idx) => (idx === i ? { ...x, unit: asPurchaseUnit(e.target.value) } : x)))
+                }
+              >
+                <option value="L">L</option>
+                <option value="ML">ML</option>
+                <option value="PCS">PCS</option>
+              </Select>
+              <Input
+                type="number"
+                min={0}
+                value={l.unitCost}
+                onChange={(e) => setLines(lines.map((x, idx) => (idx === i ? { ...x, unitCost: Number(e.target.value) } : x)))}
+              />
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 hover:text-red-700"
+                title={t("delete")}
+                aria-label={t("delete")}
+                onClick={() => removeLine(i)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <Button variant="outline" onClick={() => setLines([...lines, emptyLine()])}>
+            {t("proc.addLine")}
+          </Button>
+          <div className="text-end font-serif text-2xl">{money(total, tenant?.currency, locale)}</div>
+          <Button
+            onClick={() => save.mutate()}
+            disabled={!lines.some((l) => l.itemId) || !supplierId || !invoiceNumber || save.isPending}
+          >
+            {t("proc.edit")}
+          </Button>
+        </Card>
+      )}
     </div>
   );
 }

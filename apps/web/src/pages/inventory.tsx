@@ -4,12 +4,23 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button, Card, Input, Label, PageHeader, Select } from "@/components/ui";
+import { SearchSelect } from "@/components/search-select";
 import { fmtDate, money } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/locales";
 import { canSeeItemCost } from "@/lib/staff-pages";
 import { paginate, TablePager } from "@/components/table-pager";
+
+type CatalogItem = {
+  id: string;
+  name: string;
+  code?: string;
+};
+
+function catalogPickerItems(items?: CatalogItem[]) {
+  return (items ?? []).map((it) => ({ id: it.id, label: it.name, hint: it.code }));
+}
 
 type ItemType =
   | "OIL"
@@ -354,9 +365,10 @@ export function MovementsPage() {
 export function WastePage() {
   const { t } = useI18n();
   const qc = useQueryClient();
-  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<any[]>("/catalog/items") });
+  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<CatalogItem[]>("/catalog/items") });
   const list = useQuery({ queryKey: ["waste"], queryFn: () => api<any[]>("/inventory/waste") });
   const [form, setForm] = useState({ itemId: "", quantity: 0, unit: "ML", reason: "SPILLAGE", notes: "" });
+  const pickerItems = useMemo(() => catalogPickerItems(items.data), [items.data]);
   const mutate = useMutation({
     mutationFn: () => api("/inventory/waste", { method: "POST", body: JSON.stringify(form) }),
     onSuccess: () => {
@@ -371,14 +383,13 @@ export function WastePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="space-y-3">
           <Label>{t("item")}</Label>
-          <Select value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}>
-            <option value="">{t("select")}</option>
-            {(items.data ?? []).map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name}
-              </option>
-            ))}
-          </Select>
+          <SearchSelect
+            items={pickerItems}
+            value={form.itemId}
+            onChange={(itemId) => setForm({ ...form, itemId })}
+            placeholder={t("inventory.searchItems")}
+            emptyLabel={t("inventory.noItemMatches")}
+          />
           <Label>{t("quantity")}</Label>
           <Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
           <Label>{t("unit")}</Label>
@@ -416,9 +427,10 @@ export function WastePage() {
 export function AdjustmentsPage() {
   const { t } = useI18n();
   const qc = useQueryClient();
-  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<any[]>("/catalog/items") });
+  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<CatalogItem[]>("/catalog/items") });
   const list = useQuery({ queryKey: ["adj"], queryFn: () => api<any[]>("/inventory/adjustments") });
   const [form, setForm] = useState({ itemId: "", quantity: 0, unit: "ML", reason: "Count", isOpeningBalance: false, unitCost: 0 });
+  const pickerItems = useMemo(() => catalogPickerItems(items.data), [items.data]);
   const mutate = useMutation({
     mutationFn: () => api("/inventory/adjustments", { method: "POST", body: JSON.stringify(form) }),
     onSuccess: () => {
@@ -433,14 +445,13 @@ export function AdjustmentsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="space-y-3">
           <Label>{t("item")}</Label>
-          <Select value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}>
-            <option value="">{t("select")}</option>
-            {(items.data ?? []).map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name}
-              </option>
-            ))}
-          </Select>
+          <SearchSelect
+            items={pickerItems}
+            value={form.itemId}
+            onChange={(itemId) => setForm({ ...form, itemId })}
+            placeholder={t("inventory.searchItems")}
+            emptyLabel={t("inventory.noItemMatches")}
+          />
           <Label>{t("inventory.adjustQty")}</Label>
           <Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
           <Label>{t("unit")}</Label>
