@@ -295,7 +295,7 @@ export function FragrancePeriodicTable() {
 
   return (
     <div className="fragrance-pt-stage" aria-hidden={false}>
-      <div ref={stageRef} className="fragrance-pt-canvas" />
+      <div ref={stageRef} className="fragrance-pt-canvas" dir="ltr" />
       <div className="fragrance-pt-hud">
         <div className={`fragrance-pt-legend is-${side}`}>
           {FRAGRANCE_FAMILIES.map((family) => (

@@ -5,9 +5,12 @@
   pointer-events: auto;
 }
 
+/* CSS3DRenderer positions cards from the inline start, so RTL would push the scene sideways. */
 .fragrance-pt-canvas {
   position: absolute;
   inset: 0;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .fragrance-pt-canvas > div {
