@@ -1,16 +1,20 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, lazy, Suspense, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { Button, Input, Label } from "@/components/ui";
+import { Button, Input, Label, PasswordInput } from "@/components/ui";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { toast } from "sonner";
 import type { MessageKey } from "@/lib/locales";
 import { homePathForUser } from "@/lib/staff-pages";
 
+const FragrancePeriodicTable = lazy(() =>
+  import("@/components/fragrance-periodic-table").then((m) => ({ default: m.FragrancePeriodicTable })),
+);
+
 export function LoginPage() {
   const { login, loginOffline, authorizedUsers, authStatus, tenant, online, user, loading } = useAuth();
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,8 +68,16 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink p-4 sm:p-6" style={{ paddingLeft: "max(1rem, env(safe-area-inset-left))", paddingRight: "max(1rem, env(safe-area-inset-right))" }}>
-      <form onSubmit={onSubmit} className="w-full max-w-md rounded-3xl bg-paper p-8 shadow-2xl">
+    <div className="flex h-dvh min-h-screen flex-col-reverse overflow-hidden bg-ink md:flex-row">
+      <form
+        onSubmit={onSubmit}
+        dir={dir}
+        className="z-10 flex max-h-[48vh] w-full shrink-0 flex-col justify-center overflow-y-auto bg-paper px-6 py-8 shadow-2xl md:max-h-none md:w-[22rem] md:rounded-e-3xl"
+        style={{
+          paddingLeft: "max(1.5rem, env(safe-area-inset-left))",
+          paddingRight: "max(1.5rem, env(safe-area-inset-right))",
+        }}
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="font-serif text-3xl text-ink">{t("appName")}</div>
           <LanguageSwitcher />
@@ -97,7 +109,12 @@ export function LoginPage() {
           )}
           <div>
             <Label>{t("password")}</Label>
-            <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
           </div>
           {!offlinePicker ? (
             <Link to="/forgot-password" className="block text-sm text-gold">
@@ -112,6 +129,11 @@ export function LoginPage() {
           </Button>
         </div>
       </form>
+      <div className="relative min-h-[50vh] min-w-0 flex-1 md:min-h-0">
+        <Suspense fallback={null}>
+          <FragrancePeriodicTable />
+        </Suspense>
+      </div>
     </div>
   );
 }

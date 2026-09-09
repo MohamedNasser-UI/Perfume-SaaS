@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { liveApi } from "@/lib/http";
 import { useI18n } from "@/lib/i18n";
-import { Button, Input, Label } from "@/components/ui";
+import { Button, Label, PasswordInput } from "@/components/ui";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 export function ResetPasswordPage() {
@@ -51,7 +51,13 @@ export function ResetPasswordPage() {
           <div className="mt-8 space-y-4">
             <div>
               <Label>{t("auth.newPassword")}</Label>
-              <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required minLength={8} />
+              <PasswordInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete="new-password"
+              />
             </div>
             <Button className="w-full" disabled={pending}>
               {pending ? t("auth.saving") : t("auth.resetSubmit")}

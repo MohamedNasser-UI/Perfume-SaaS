@@ -28,6 +28,14 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "src") },
   },
+  optimizeDeps: {
+    include: [
+      "three",
+      "three/addons/renderers/CSS3DRenderer.js",
+      "three/addons/controls/TrackballControls.js",
+      "three/addons/libs/tween.module.js",
+    ],
+  },
   server: {
     port: 5173,
     proxy: {
