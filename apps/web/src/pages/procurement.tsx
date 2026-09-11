@@ -10,6 +10,7 @@ import { fmtDate, money } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { paginate, TablePager } from "@/components/table-pager";
+import { filterPurchases, hasPurchaseFilter } from "@/lib/purchase-filter";
 
 type CatalogItem = {
   id: string;
@@ -42,36 +43,123 @@ export function PurchasesPage() {
   const { tenant } = useAuth();
   const { t, locale } = useI18n();
   const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [supplierId, setSupplierId] = useState("");
+  const [itemId, setItemId] = useState("");
   const { data } = useQuery({ queryKey: ["purchases"], queryFn: () => api<any[]>("/purchases") });
-  const paged = paginate(data ?? [], page);
+  const suppliers = useQuery({ queryKey: ["suppliers"], queryFn: () => api<any[]>("/suppliers") });
+  const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<CatalogItem[]>("/catalog/items") });
+
+  const supplierOptions = useMemo(
+    () => [
+      { id: "", label: t("proc.filterSupplier") },
+      ...(suppliers.data ?? []).map((s) => ({ id: s.id, label: s.name })),
+    ],
+    [suppliers.data, t],
+  );
+  const itemOptions = useMemo(
+    () => [
+      { id: "", label: t("proc.filterItem") },
+      ...(items.data ?? []).map((it) => ({ id: it.id, label: it.name, hint: it.code })),
+    ],
+    [items.data, t],
+  );
+
+  const filtered = useMemo(
+    () => filterPurchases(data ?? [], { dateFrom, dateTo, supplierId, itemId }),
+    [data, dateFrom, dateTo, supplierId, itemId],
+  );
+
+  const paged = paginate(filtered, page);
+  const hasFilters = hasPurchaseFilter({ dateFrom, dateTo, supplierId, itemId });
+
+  function updateFilter(apply: () => void) {
+    apply();
+    setPage(1);
+  }
+
+  function clearFilters() {
+    updateFilter(() => {
+      setDateFrom("");
+      setDateTo("");
+      setSupplierId("");
+      setItemId("");
+    });
+  }
+
   return (
     <div>
       <PageHeader title={t("proc.title")} actions={<Link to="/procurement/new"><Button>{t("proc.new")}</Button></Link>} />
+      <Card className="mb-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <Label>{t("proc.filterFrom")}</Label>
+            <Input type="date" value={dateFrom} onChange={(e) => updateFilter(() => setDateFrom(e.target.value))} />
+          </div>
+          <div>
+            <Label>{t("proc.filterTo")}</Label>
+            <Input type="date" value={dateTo} onChange={(e) => updateFilter(() => setDateTo(e.target.value))} />
+          </div>
+          <div>
+            <Label>{t("proc.supplier")}</Label>
+            <SearchSelect
+              items={supplierOptions}
+              value={supplierId}
+              onChange={(id) => updateFilter(() => setSupplierId(id))}
+              placeholder={t("proc.filterSupplier")}
+              emptyLabel={t("proc.noSupplierMatches")}
+            />
+          </div>
+          <div>
+            <Label>{t("proc.item")}</Label>
+            <SearchSelect
+              items={itemOptions}
+              value={itemId}
+              onChange={(id) => updateFilter(() => setItemId(id))}
+              placeholder={t("proc.filterItem")}
+              emptyLabel={t("proc.noItemMatches")}
+            />
+          </div>
+        </div>
+        {hasFilters ? (
+          <div className="mt-3 flex items-center gap-3">
+            <Button onClick={clearFilters}>
+              {t("proc.clearFilters")}
+            </Button>
+            <span className="text-sm text-stone-500">{t("proc.filterCount", { count: filtered.length })}</span>
+          </div>
+        ) : null}
+      </Card>
       <Card className="overflow-auto p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-stone-50 text-start">
-            <tr>
-              <th className="p-3">{t("proc.number")}</th>
-              <th>{t("proc.supplier")}</th>
-              <th>{t("date")}</th>
-              <th>{t("total")}</th>
-              <th>{t("status")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paged.slice.map((p) => (
-              <tr key={p.id} className="border-t">
-                <td className="p-3">
-                  <Link className="text-gold" to={`/procurement/${p.id}`}>{p.number}</Link>
-                </td>
-                <td>{p.supplier.name}</td>
-                <td>{fmtDate(p.invoiceDate, locale)}</td>
-                <td>{money(Number(p.totalAmount), tenant?.currency, locale)}</td>
-                <td>{p.status}</td>
+        {filtered.length === 0 ? (
+          <p className="p-6 text-sm text-stone-500">{hasFilters ? t("proc.noMatches") : t("proc.noInvoices")}</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-stone-50 text-start">
+              <tr>
+                <th className="p-3">{t("proc.number")}</th>
+                <th>{t("proc.supplier")}</th>
+                <th>{t("date")}</th>
+                <th>{t("total")}</th>
+                <th>{t("status")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paged.slice.map((p) => (
+                <tr key={p.id} className="border-t">
+                  <td className="p-3">
+                    <Link className="text-gold" to={`/procurement/${p.id}`}>{p.number}</Link>
+                  </td>
+                  <td>{p.supplier.name}</td>
+                  <td>{fmtDate(p.invoiceDate, locale)}</td>
+                  <td>{money(Number(p.totalAmount), tenant?.currency, locale)}</td>
+                  <td>{p.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         <TablePager page={paged.current} pageCount={paged.pageCount} onPage={setPage} />
       </Card>
     </div>
