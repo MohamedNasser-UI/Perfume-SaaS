@@ -118,7 +118,14 @@ export class CustomersController {
           include: {
             product: true,
             configuration: {
-              include: { oil: true, concentration: true, bottle: true, packaging: true, stabilizer: true },
+              include: {
+                oil: true,
+                concentration: true,
+                bottle: true,
+                packaging: true,
+                stabilizer: true,
+                oilComponents: { include: { oil: true }, orderBy: { sortOrder: "asc" } },
+              },
             },
           },
         },

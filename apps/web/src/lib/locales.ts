@@ -1,7 +1,7 @@
 export type Locale = "en" | "ar";
 
 export const en = {
-  appName: "Perfume Outlet",
+  appName: "Scent Pro",
   loading: "Loading…",
   language: "Language",
   english: "English",
@@ -165,6 +165,13 @@ export const en = {
   "pos.bottle": "Bottle",
   "pos.tapToChoose": "Tap to choose",
   "pos.chooseOil": "Choose oil",
+  "pos.oilSingle": "Single",
+  "pos.oilMulti": "Multi",
+  "pos.oilMixDone": "Done",
+  "pos.mixTotal": "Mix total",
+  "pos.mixHint": "Standard oil is {qty} ml, split evenly. Change any oil if needed.",
+  "pos.mixDiffers": "Mix total differs from the standard. You can still add it.",
+  "pos.overBottle": "Oil and stabilizer cannot exceed the bottle size.",
   "pos.chooseConcentration": "Choose concentration",
   "pos.chooseBottle": "Choose bottle",
   "pos.standardOil": "Standard oil",
@@ -191,6 +198,7 @@ export const en = {
   "sales.consumed": "Inventory consumed",
   "sales.recipe": "{oil} · {concentration} · {size}ml",
   "sales.oilAlcohol": "Oil {oil}ml (std {std}) · Alcohol {alcohol}ml",
+  "sales.mixOil": "{name}: {qty} ml",
   "sales.customerBottle": "Customer bottle",
   "sales.costPrice": "Cost {cost} · Price {price}",
   "sales.linePrice": "Price {price}",
@@ -436,7 +444,7 @@ export const en = {
 } as const;
 
 export const ar: Record<keyof typeof en, string> = {
-  appName: "منفذ العطور",
+  appName: "Scent Pro",
   loading: "جاري التحميل…",
   language: "اللغة",
   english: "English",
@@ -600,6 +608,13 @@ export const ar: Record<keyof typeof en, string> = {
   "pos.bottle": "الزجاجة",
   "pos.tapToChoose": "اضغط للاختيار",
   "pos.chooseOil": "اختر الزيت",
+  "pos.oilSingle": "فردي",
+  "pos.oilMulti": "متعدد",
+  "pos.oilMixDone": "تم",
+  "pos.mixTotal": "إجمالي المزيج",
+  "pos.mixHint": "الزيت القياسي {qty} مل، مقسوم بالتساوي. يمكنك تعديل أي زيت.",
+  "pos.mixDiffers": "إجمالي المزيج يختلف عن القياسي. يمكنك إضافته.",
+  "pos.overBottle": "لا يمكن أن يتجاوز الزيت والمثبت حجم الزجاجة.",
   "pos.chooseConcentration": "اختر التركيز",
   "pos.chooseBottle": "اختر الزجاجة",
   "pos.standardOil": "الزيت القياسي",
@@ -626,6 +641,7 @@ export const ar: Record<keyof typeof en, string> = {
   "sales.consumed": "المستهلك من المخزون",
   "sales.recipe": "{oil} · {concentration} · {size} مل",
   "sales.oilAlcohol": "زيت {oil} مل (قياسي {std}) · كحول {alcohol} مل",
+  "sales.mixOil": "{name}: {qty} مل",
   "sales.customerBottle": "زجاجة العميل",
   "sales.costPrice": "التكلفة {cost} · السعر {price}",
   "sales.linePrice": "السعر {price}",

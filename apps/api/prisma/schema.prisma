@@ -459,6 +459,7 @@ model Oil {
   tenant        Tenant                  @relation(fields: [tenantId], references: [id])
   inventoryItem InventoryItem           @relation(fields: [inventoryItemId], references: [id])
   configurations CustomizedConfiguration[]
+  mixComponents CustomizedOilComponent[]
   preferences   CustomerPreference[]
 
   @@unique([tenantId, code])
@@ -864,8 +865,23 @@ model CustomizedConfiguration {
   pump         Pump?                    @relation(fields: [pumpId], references: [id])
   packaging    PackagingItem?           @relation(fields: [packagingId], references: [id])
   finishedItem FinishedCustomizedItem?
+  oilComponents CustomizedOilComponent[]
 
   @@map("customized_configurations")
+}
+
+model CustomizedOilComponent {
+  id              String  @id @default(cuid())
+  configurationId String  @map("configuration_id")
+  oilId           String  @map("oil_id")
+  qtyMl           Decimal @map("qty_ml") @db.Decimal(18, 4)
+  sortOrder       Int     @default(0) @map("sort_order")
+
+  configuration CustomizedConfiguration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+  oil           Oil                     @relation(fields: [oilId], references: [id])
+
+  @@index([configurationId])
+  @@map("customized_oil_components")
 }
 
 model FinishedCustomizedItem {

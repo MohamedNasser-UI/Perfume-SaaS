@@ -10,6 +10,7 @@ type SnapshotInventory = {
 
 export async function previewCustomizedLocal(payload: {
   oilId: string;
+  oils?: { oilId: string; qtyMl: number }[];
   concentrationId: string;
   bottleId: string;
   oilActualQtyMl: number;
@@ -26,16 +27,23 @@ export async function previewCustomizedLocal(payload: {
   const settings = await getCache<any>("/settings");
   const inventory = (await getCache<SnapshotInventory[]>("/inventory")) ?? [];
 
-  const oil = oils.find((o) => o.id === payload.oilId);
+  const mix = payload.oils?.length
+    ? payload.oils
+    : [{ oilId: payload.oilId, qtyMl: payload.oilActualQtyMl }];
+  const mixRows = mix.map((part) => {
+    const oil = oils.find((o) => o.id === part.oilId);
+    if (!oil) throw new Error("Catalog snapshot is incomplete. Connect to the internet once to refresh.");
+    return { oil, qtyMl: Number(part.qtyMl) };
+  });
   const bottle = bottles.find((b) => b.id === payload.bottleId);
   const concentration = (settings?.concentrations ?? []).find((c: any) => c.id === payload.concentrationId && c.active !== false);
   const alcohol = alcohols.find((a) => a.active !== false) ?? alcohols[0];
-  if (!oil || !bottle || !concentration || !alcohol) {
+  if (!mixRows.length || !bottle || !concentration || !alcohol) {
     throw new Error("Catalog snapshot is incomplete. Connect to the internet once to refresh.");
   }
 
   const oilStandard = Number(bottle.sizeMl) * Number(concentration.oilPercentage) / 100;
-  const oilActual = Number(payload.oilActualQtyMl);
+  const oilActual = mixRows.reduce((sum, part) => sum + part.qtyMl, 0);
   const stabilizerQty = Number(payload.stabilizerQtyMl ?? 0);
   const alcoholQty = Number(bottle.sizeMl) - oilActual - stabilizerQty;
   if (alcoholQty < 0) throw new Error("Oil + stabilizer + alcohol cannot exceed bottle size");
@@ -48,10 +56,12 @@ export async function previewCustomizedLocal(payload: {
   };
 
   const components: { itemId: string; quantity: number; unit: "ML" | "PCS"; itemName: string }[] = [];
-  const oilItemId = oil.inventoryItemId ?? oil.inventoryItem?.id;
   const alcoholItemId = alcohol.inventoryItemId ?? alcohol.inventoryItem?.id;
   const bottleItemId = bottle.inventoryItemId ?? bottle.inventoryItem?.id;
-  if (oilItemId) components.push({ itemId: oilItemId, quantity: oilActual, unit: "ML", itemName: oil.name });
+  for (const part of mixRows) {
+    const oilItemId = part.oil.inventoryItemId ?? part.oil.inventoryItem?.id;
+    if (oilItemId) components.push({ itemId: oilItemId, quantity: part.qtyMl, unit: "ML", itemName: part.oil.name });
+  }
   if (alcoholItemId) components.push({ itemId: alcoholItemId, quantity: alcoholQty, unit: "ML", itemName: alcohol.name });
   if (stabilizer) {
     const id = stabilizer.inventoryItemId ?? stabilizer.inventoryItem?.id;
@@ -82,8 +92,9 @@ export async function previewCustomizedLocal(payload: {
   const calculatedPrice = materialCost * (1 + markup / 100);
 
   return {
-    oilId: oil.id,
-    oilName: oil.name,
+    oilId: mixRows[0]!.oil.id,
+    oilName: mixRows.map((part) => part.oil.name).join(" + "),
+    oils: mixRows.map((part) => ({ oilId: part.oil.id, oilName: part.oil.name, qtyMl: part.qtyMl })),
     concentrationId: concentration.id,
     concentrationName: concentration.name,
     bottleId: bottle.id,

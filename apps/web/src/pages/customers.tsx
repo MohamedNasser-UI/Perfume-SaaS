@@ -76,11 +76,20 @@ export function CustomerProfilePage() {
     pos.addLine({
       key: crypto.randomUUID(),
       lineType: "CUSTOMIZED",
-      label: `${cfg.oil.name} · ${cfg.concentration.name} · ${cfg.bottleSizeMl}ml`,
+      label: `${cfg.oilComponents?.length > 1
+        ? cfg.oilComponents.map((c: { oil: { name: string } }) => c.oil.name).join(" + ")
+        : cfg.oil.name} · ${cfg.concentration.name} · ${cfg.bottleSizeMl}ml`,
       qty: 1,
       unitPrice: 0,
       payload: {
         oilId: cfg.oilId,
+        oils:
+          cfg.oilComponents?.length > 1
+            ? cfg.oilComponents.map((c: { oilId: string; qtyMl: string | number }) => ({
+                oilId: c.oilId,
+                qtyMl: Number(c.qtyMl),
+              }))
+            : undefined,
         concentrationId: cfg.concentrationId,
         bottleId: cfg.bottleId,
         oilActualQtyMl: Number(cfg.oilActualQtyMl),
@@ -111,7 +120,10 @@ export function CustomerProfilePage() {
                 <div key={l.id} className="mt-2 flex items-center justify-between text-sm">
                   <span>
                     {t("sales.recipe", {
-                      oil: l.configuration.oil.name,
+                      oil:
+                        l.configuration.oilComponents?.length > 1
+                          ? l.configuration.oilComponents.map((c: { oil: { name: string } }) => c.oil.name).join(" + ")
+                          : l.configuration.oil.name,
                       concentration: l.configuration.concentration.name,
                       size: l.configuration.bottleSizeMl,
                     })}

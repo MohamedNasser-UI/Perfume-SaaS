@@ -91,7 +91,10 @@ export function SaleDetailPage() {
               {l.configuration && (
                 <div className="mt-1 text-sm text-stone-600">
                   {t("sales.recipe", {
-                    oil: l.configuration.oil.name,
+                    oil:
+                      l.configuration.oilComponents?.length > 1
+                        ? l.configuration.oilComponents.map((c: { oil: { name: string } }) => c.oil.name).join(" + ")
+                        : l.configuration.oil.name,
                     concentration: l.configuration.concentration.name,
                     size: l.configuration.bottleSizeMl,
                   })}
@@ -102,6 +105,11 @@ export function SaleDetailPage() {
                     alcohol: l.configuration.alcoholQtyMl,
                   })}
                   {l.configuration.customerSuppliedBottle ? ` · ${t("sales.customerBottle")}` : ""}
+                  {l.configuration.oilComponents?.length > 1
+                    ? l.configuration.oilComponents.map((c: { id: string; oil: { name: string }; qtyMl: string | number }) => (
+                        <div key={c.id}>{t("sales.mixOil", { name: c.oil.name, qty: Number(c.qtyMl) })}</div>
+                      ))
+                    : null}
                 </div>
               )}
               {l.product && <div className="text-sm">{l.product.name}</div>}

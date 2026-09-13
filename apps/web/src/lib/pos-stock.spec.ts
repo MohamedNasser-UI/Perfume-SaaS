@@ -15,7 +15,7 @@ function catalog(over: Partial<PosStockCatalog> = {}): PosStockCatalog {
   };
 }
 
-function ready(over: Partial<Extract<PosLine, { lineType: "ORIGINAL" }>> = {}): PosLine {
+function ready(over: Partial<{ key: string; label: string; qty: number; unitPrice: number; productId: string }> = {}): PosLine {
   return {
     key: "ready-1",
     lineType: "ORIGINAL",
@@ -107,6 +107,80 @@ test("customized max accounts for other customized lines sharing oil", () => {
       lineKey: "custom-1",
     }),
     2,
+  );
+});
+
+test("mix of two oils deducts each oil separately", () => {
+  assert.equal(
+    maxPosLineQty({
+      inventory: [
+        { itemId: "inv-oil", onHand: 20 },
+        { itemId: "inv-oil-2", onHand: 6 },
+        { itemId: "inv-alc", onHand: 1000 },
+        { itemId: "inv-bottle", onHand: 80 },
+        { itemId: "inv-pump", onHand: 80 },
+      ],
+      catalog: catalog({
+        oils: [
+          { id: "o1", inventoryItemId: "inv-oil" },
+          { id: "o2", inventoryItemId: "inv-oil-2" },
+        ],
+      }),
+      lines: [
+        custom({
+          payload: {
+            oilId: "o1",
+            oils: [
+              { oilId: "o1", qtyMl: 5 },
+              { oilId: "o2", qtyMl: 5 },
+            ],
+            concentrationId: "c1",
+            bottleId: "b1",
+            oilActualQtyMl: 10,
+            customerSuppliedBottle: false,
+          },
+        }),
+      ],
+      lineKey: "custom-1",
+    }),
+    1,
+  );
+});
+
+test("mix over bottle size is not sellable", () => {
+  assert.equal(
+    maxPosLineQty({
+      inventory: [
+        { itemId: "inv-oil", onHand: 100 },
+        { itemId: "inv-oil-2", onHand: 100 },
+        { itemId: "inv-alc", onHand: 1000 },
+        { itemId: "inv-bottle", onHand: 80 },
+        { itemId: "inv-pump", onHand: 80 },
+      ],
+      catalog: catalog({
+        oils: [
+          { id: "o1", inventoryItemId: "inv-oil" },
+          { id: "o2", inventoryItemId: "inv-oil-2" },
+        ],
+      }),
+      lines: [
+        custom({
+          payload: {
+            oilId: "o1",
+            oils: [
+              { oilId: "o1", qtyMl: 30 },
+              { oilId: "o2", qtyMl: 30 },
+            ],
+            concentrationId: "c1",
+            bottleId: "b1",
+            oilActualQtyMl: 60,
+            customerSuppliedBottle: false,
+          },
+        }),
+      ],
+      lineKey: "custom-1",
+    }),
+    undefined,
   );
 });
 

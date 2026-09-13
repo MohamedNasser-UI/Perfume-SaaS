@@ -42,21 +42,30 @@ function onHandByItem(inventory: InventoryOnHand[]) {
 }
 
 function customizedComponentsPerBottle(line: Extract<PosLine, { lineType: "CUSTOMIZED" }>, catalog: PosStockCatalog) {
-  const oil = catalog.oils.find((o) => o.id === line.payload.oilId);
+  const mix = line.payload.oils?.length
+    ? line.payload.oils
+    : [{ oilId: line.payload.oilId, qtyMl: line.payload.oilActualQtyMl }];
+  const mixRows = mix.map((part) => ({
+    oil: catalog.oils.find((o) => o.id === part.oilId),
+    qtyMl: Number(part.qtyMl),
+  }));
+  if (mixRows.some((part) => !part.oil)) return null;
   const bottle = catalog.bottles.find((b) => b.id === line.payload.bottleId);
   const alcohol = catalog.alcohols.find((a) => a.active !== false) ?? catalog.alcohols[0];
-  if (!oil || !bottle || !alcohol) return null;
+  if (!bottle || !alcohol) return null;
 
-  const oilActual = Number(line.payload.oilActualQtyMl);
+  const oilActual = mixRows.reduce((sum, part) => sum + part.qtyMl, 0);
   const stabilizerQty = Number(line.payload.stabilizerQtyMl ?? 0);
   const alcoholQty = Number(bottle.sizeMl) - oilActual - stabilizerQty;
   if (alcoholQty < 0) return null;
 
   const components: { itemId: string; quantity: number }[] = [];
-  const oilItemId = catalogItemId(oil);
   const alcoholItemId = catalogItemId(alcohol);
   const bottleItemId = catalogItemId(bottle);
-  if (oilItemId) components.push({ itemId: oilItemId, quantity: oilActual });
+  for (const part of mixRows) {
+    const oilItemId = catalogItemId(part.oil);
+    if (oilItemId) components.push({ itemId: oilItemId, quantity: part.qtyMl });
+  }
   if (alcoholItemId) components.push({ itemId: alcoholItemId, quantity: alcoholQty });
 
   if (line.payload.stabilizerId) {
@@ -117,6 +126,7 @@ export function maxPosLineQty(input: PosStockInput): number | undefined {
     if (!itemId) return undefined;
     return Math.max(0, Math.floor(stock.get(itemId) ?? 0) - (reserved.get(itemId) ?? 0));
   }
+  if (line.lineType !== "CUSTOMIZED") return undefined;
 
   const perBottle = customizedComponentsPerBottle(line, input.catalog);
   if (!perBottle?.length) return undefined;

@@ -161,6 +161,7 @@ export class CatalogService {
     if (!oil) throw new NotFoundException();
     const used =
       (await this.prisma.customizedConfiguration.count({ where: { oilId: id } })) > 0 ||
+      (await this.prisma.customizedOilComponent.count({ where: { oilId: id } })) > 0 ||
       (await this.prisma.customerPreference.count({ where: { favoriteOilId: id } })) > 0;
     await this.assertCanDeleteInventoryItem(oil.inventoryItemId, used);
     await this.prisma.oil.delete({ where: { id } });

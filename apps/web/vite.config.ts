@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
       manifest: {
-        name: "Perfume Outlet",
-        short_name: "Perfume",
+        name: "Scent Pro",
+        short_name: "Scent Pro",
         start_url: "/",
         display: "standalone",
         background_color: "#1c1917",

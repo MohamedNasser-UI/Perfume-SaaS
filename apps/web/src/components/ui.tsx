@@ -71,6 +71,20 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   );
 }
 
+export function BrandName({
+  className,
+  accentClassName = "text-gold",
+}: {
+  className?: string;
+  accentClassName?: string;
+}) {
+  return (
+    <span className={cn("font-serif", className)}>
+      Scent <span className={accentClassName}>Pro</span>
+    </span>
+  );
+}
+
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("rounded-2xl border border-stone-200 bg-white p-5 shadow-sm", className)} {...props} />;
 }

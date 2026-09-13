@@ -31,6 +31,7 @@ function makePrisma(over: Record<string, unknown> = {}) {
     stockAdjustment: { count: async () => 0 },
     finishedCustomizedItem: { count: async () => 0 },
     customizedConfiguration: { count: async () => 0 },
+    customizedOilComponent: { count: async () => 0 },
     customerPreference: { count: async () => 0 },
     ...over,
   };

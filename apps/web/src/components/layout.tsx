@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { BrandName } from "@/components/ui";
 import type { MessageKey } from "@/lib/locales";
 import { hasStaffPage, type StaffPage } from "@/lib/staff-pages";
 
@@ -87,7 +88,7 @@ export function AppLayout() {
       >
         <div className="flex items-start justify-between border-b border-white/10 px-5 py-6">
           <div className="min-w-0">
-            <div className="font-serif text-xl text-gold-light">{t("appName")}</div>
+            <BrandName className="text-xl text-gold-light" accentClassName="text-white" />
             <div className="mt-1 truncate text-xs text-stone-400">{tenant?.name}</div>
           </div>
           <button

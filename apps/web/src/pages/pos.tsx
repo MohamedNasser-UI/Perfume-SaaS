@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { usePos, CustomPreview, PosLine } from "@/lib/pos-store";
 import { maxPosLineQty, type InventoryOnHand, type PosStockCatalog } from "@/lib/pos-stock";
+import { mixLabel, mixTotalMl, primaryOilId, splitMix, type MixOil } from "@/lib/oil-mix";
 import { Button, Card, Input, Label, Select } from "@/components/ui";
 import { money } from "@/lib/utils";
 import { canSeeItemCost } from "@/lib/staff-pages";
@@ -647,14 +648,22 @@ function PerfumeBuilder({
   onAdd: (line: PosLine) => void;
 }) {
   const [oilId, setOilId] = useState("");
+  const [oilMode, setOilMode] = useState<"single" | "multi">("single");
+  const [mixOils, setMixOils] = useState<MixOil[]>([]);
+  const [draftOilIds, setDraftOilIds] = useState<string[]>([]);
   const [concentrationId, setConcentrationId] = useState("");
   const [bottleId, setBottleId] = useState("");
   const [picking, setPicking] = useState<PickerKind | null>(null);
+  const isMix = oilMode === "multi" && mixOils.length > 0;
   const oil = oils.find((o) => o.id === oilId);
+  const mixNames = mixOils.map((part) => oils.find((o) => o.id === part.oilId)?.name ?? "").filter(Boolean);
+  const oilTileValue = isMix ? mixLabel(mixNames) : oil?.name;
   const bottle = bottles.find((b) => b.id === bottleId);
   const conc = concentrations.find((c) => c.id === concentrationId);
   const standard = bottle && conc ? (bottle.sizeMl * Number(conc.oilPercentage)) / 100 : 0;
   const [oilActual, setOilActual] = useState(0);
+  const mixTotal = mixTotalMl(mixOils);
+  const usedOilMl = isMix ? mixTotal : oilActual;
   const [stabId, setStabId] = useState("");
   const [stabQty, setStabQty] = useState(0);
   const [packId, setPackId] = useState("");
@@ -668,38 +677,79 @@ function PerfumeBuilder({
     if (standard) setOilActual(standard);
   }, [standard]);
 
+  const mixOilIds = mixOils.map((part) => part.oilId).join(",");
+  useEffect(() => {
+    if (!isMix || !standard || !mixOilIds) return;
+    setMixOils(splitMix(mixOilIds.split(","), standard));
+  }, [isMix, standard, mixOilIds]);
+
   const payload = useMemo(
     () => ({
-      oilId,
+      oilId: isMix ? primaryOilId(mixOils, oilId) : oilId,
+      oils: isMix ? mixOils : undefined,
       concentrationId,
       bottleId,
-      oilActualQtyMl: oilActual,
+      oilActualQtyMl: usedOilMl,
       stabilizerId: stabId || undefined,
       stabilizerQtyMl: stabQty || undefined,
       packagingId: packId || undefined,
       customerSuppliedBottle: customerBottle,
     }),
-    [oilId, concentrationId, bottleId, oilActual, stabId, stabQty, packId, customerBottle],
+    [isMix, mixOils, oilId, concentrationId, bottleId, usedOilMl, stabId, stabQty, packId, customerBottle],
   );
 
   useEffect(() => {
-    if (!oilId || !concentrationId || !bottleId || !oilActual) {
+    if (!oilId || !concentrationId || !bottleId || !usedOilMl) {
       setPreview(null);
       return;
     }
     const t = setTimeout(() => {
       api<CustomPreview>("/pricing/preview", { method: "POST", body: JSON.stringify(payload) })
         .then(setPreview)
-        .catch((e) => toast.error(e.message));
+        .catch((e) => {
+          setPreview(null);
+          toast.error(e.message);
+        });
     }, 250);
     return () => clearTimeout(t);
-  }, [payload, oilId, concentrationId, bottleId, oilActual]);
+  }, [payload, oilId, concentrationId, bottleId, usedOilMl]);
+
+  function openOilPicker() {
+    const currentIds = isMix ? mixOils.map((part) => part.oilId) : oilId ? [oilId] : [];
+    setDraftOilIds(currentIds);
+    setPicking("oil");
+  }
 
   function pick(kind: PickerKind, id: string) {
-    if (kind === "oil") setOilId(id);
+    if (kind === "oil") {
+      if (oilMode === "multi") {
+        setDraftOilIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+        return;
+      }
+      setOilId(id);
+      setMixOils([]);
+    }
     if (kind === "concentration") setConcentrationId(id);
     if (kind === "bottle") setBottleId(id);
     setPicking(null);
+  }
+
+  function confirmMix() {
+    if (!draftOilIds.length) return;
+    const next = standard ? splitMix(draftOilIds, standard) : draftOilIds.map((id) => ({ oilId: id, qtyMl: 0 }));
+    setMixOils(next);
+    setOilId(draftOilIds[0]!);
+    setPicking(null);
+  }
+
+  function changeOilMode(next: "single" | "multi") {
+    setOilMode(next);
+    if (next === "single") {
+      const keep = draftOilIds[0] ?? oilId;
+      setDraftOilIds(keep ? [keep] : []);
+    } else {
+      setDraftOilIds((current) => (current.length ? current : oilId ? [oilId] : []));
+    }
   }
 
   const pickerItems: Record<PickerKind, PickerItem[]> = {
@@ -718,6 +768,7 @@ function PerfumeBuilder({
   };
 
   const selectedId = picking === "oil" ? oilId : picking === "concentration" ? concentrationId : bottleId;
+  const overBottle = Boolean(bottle && usedOilMl + stabQty > bottle.sizeMl);
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-3">
@@ -733,7 +784,11 @@ function PerfumeBuilder({
             }
             items={pickerItems[picking]}
             selectedId={selectedId}
+            selectedIds={picking === "oil" && oilMode === "multi" ? draftOilIds : undefined}
+            mode={picking === "oil" ? oilMode : undefined}
+            onModeChange={picking === "oil" ? changeOilMode : undefined}
             onSelect={(id) => pick(picking, id)}
+            onDone={picking === "oil" && oilMode === "multi" ? confirmMix : undefined}
             onBack={() => setPicking(null)}
           />
         ) : (
@@ -744,7 +799,7 @@ function PerfumeBuilder({
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-auto p-5">
               <div className="grid gap-3 sm:grid-cols-3">
-                <ChoiceTile label={t("pos.oil")} value={oil?.name} placeholder={t("pos.tapToChoose")} onClick={() => setPicking("oil")} />
+                <ChoiceTile label={t("pos.oil")} value={oilTileValue} placeholder={t("pos.tapToChoose")} onClick={openOilPicker} />
                 <ChoiceTile
                   label={t("pos.concentration")}
                   value={conc ? `${conc.name} · ${Number(conc.oilPercentage)}%` : undefined}
@@ -768,18 +823,63 @@ function PerfumeBuilder({
                       <div className="font-serif text-xl">{t("pos.oilUsedLabel", { qty: standard })}</div>
                     </div>
                     <div className="rounded-2xl border border-stone-200 p-3">
-                      <Label>{t("pos.actualOil")}</Label>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Button type="button" variant="outline" className="h-11 w-11 px-0 text-lg" onClick={() => setOilActual((v) => Math.max(0.5, +(v - 0.5).toFixed(1)))}>
-                          −
-                        </Button>
-                        <div className="flex-1 text-center font-serif text-xl">{t("pos.oilUsedLabel", { qty: oilActual })}</div>
-                        <Button type="button" variant="outline" className="h-11 w-11 px-0 text-lg" onClick={() => setOilActual((v) => +(v + 0.5).toFixed(1))}>
-                          +
-                        </Button>
-                      </div>
+                      <Label>{isMix ? t("pos.mixTotal") : t("pos.actualOil")}</Label>
+                      {isMix ? (
+                        <div className="font-serif text-xl">{t("pos.oilUsedLabel", { qty: mixTotal })}</div>
+                      ) : (
+                        <div className="mt-1 flex items-center gap-2">
+                          <Button type="button" variant="outline" className="h-11 w-11 px-0 text-lg" onClick={() => setOilActual((v) => Math.max(0.5, +(v - 0.5).toFixed(1)))}>
+                            −
+                          </Button>
+                          <div className="flex-1 text-center font-serif text-xl">{t("pos.oilUsedLabel", { qty: oilActual })}</div>
+                          <Button type="button" variant="outline" className="h-11 w-11 px-0 text-lg" onClick={() => setOilActual((v) => +(v + 0.5).toFixed(1))}>
+                            +
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
+                  {isMix ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-stone-500">{t("pos.mixHint", { qty: standard })}</p>
+                      {Math.abs(mixTotal - standard) > 0.05 ? (
+                        <p className="text-sm text-amber-700">{t("pos.mixDiffers")}</p>
+                      ) : null}
+                      {mixOils.map((part) => {
+                        const name = oils.find((o) => o.id === part.oilId)?.name ?? part.oilId;
+                        return (
+                          <div key={part.oilId} className="flex items-center gap-3 rounded-2xl border border-stone-200 p-3">
+                            <div className="min-w-0 flex-1 font-medium">{name}</div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-11 w-11 px-0 text-lg"
+                              onClick={() =>
+                                setMixOils((current) =>
+                                  current.map((oil) => (oil.oilId === part.oilId ? { ...oil, qtyMl: Math.max(0.1, +(oil.qtyMl - 0.5).toFixed(1)) } : oil)),
+                                )
+                              }
+                            >
+                              −
+                            </Button>
+                            <div className="min-w-16 text-center font-serif text-xl">{t("pos.oilUsedLabel", { qty: part.qtyMl })}</div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-11 w-11 px-0 text-lg"
+                              onClick={() =>
+                                setMixOils((current) =>
+                                  current.map((oil) => (oil.oilId === part.oilId ? { ...oil, qtyMl: +(oil.qtyMl + 0.5).toFixed(1) } : oil)),
+                                )
+                              }
+                            >
+                              +
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
 
                   <div>
                     <Label>{t("pos.stabilizer")}</Label>
@@ -820,6 +920,8 @@ function PerfumeBuilder({
                     </div>
                   </div>
 
+                  {overBottle ? <p className="text-sm text-red-700">{t("pos.overBottle")}</p> : null}
+
                   <Chip selected={customerBottle} onClick={() => setCustomerBottle((v) => !v)}>
                     {t("pos.customerBottle")}
                   </Chip>
@@ -855,13 +957,13 @@ function PerfumeBuilder({
               </Button>
               <Button
                 className="flex-1 py-3"
-                disabled={!preview}
+                disabled={!preview || overBottle}
                 onClick={() => {
                   if (!preview) return;
                   onAdd({
                     key: crypto.randomUUID(),
                     lineType: "CUSTOMIZED",
-                    label: `${preview.oilName} · ${preview.concentrationName} · ${preview.bottleSizeMl}ml`,
+                    label: `${isMix ? mixLabel(mixNames) : preview.oilName} · ${preview.concentrationName} · ${preview.bottleSizeMl}ml`,
                     qty: 1,
                     unitPrice: preview.calculatedPrice,
                     payload,
@@ -929,13 +1031,21 @@ function CardPicker({
   title,
   items,
   selectedId,
+  selectedIds,
+  mode,
+  onModeChange,
   onSelect,
+  onDone,
   onBack,
 }: {
   title: string;
   items: PickerItem[];
   selectedId?: string;
+  selectedIds?: string[];
+  mode?: "single" | "multi";
+  onModeChange?: (mode: "single" | "multi") => void;
   onSelect: (id: string) => void;
+  onDone?: () => void;
   onBack: () => void;
 }) {
   const { t } = useI18n();
@@ -944,7 +1054,8 @@ function CardPicker({
     const hay = `${item.title} ${item.subtitle ?? ""}`.toLowerCase();
     return hay.includes(q.trim().toLowerCase());
   });
-  const showSearch = items.length > 8;
+  const isOilPicker = Boolean(mode);
+  const showSearch = isOilPicker || items.length > 8;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -953,15 +1064,32 @@ function CardPicker({
           {t("back")}
         </Button>
         <h2 className="font-serif text-2xl">{title}</h2>
+        {onDone ? (
+          <Button type="button" className="ms-auto" disabled={!selectedIds?.length} onClick={onDone}>
+            {t("pos.oilMixDone")}
+          </Button>
+        ) : null}
       </div>
-      {showSearch ? (
-        <div className="border-b px-4 py-3">
-          <Input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("pos.filter")}
-          />
+      {showSearch || isOilPicker ? (
+        <div className="space-y-3 border-b px-4 py-3">
+          {showSearch ? (
+            <Input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("pos.filter")}
+            />
+          ) : null}
+          {mode && onModeChange ? (
+            <div className="flex gap-2">
+              <Chip selected={mode === "single"} onClick={() => onModeChange("single")}>
+                {t("pos.oilSingle")}
+              </Chip>
+              <Chip selected={mode === "multi"} onClick={() => onModeChange("multi")}>
+                {t("pos.oilMulti")}
+              </Chip>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -970,7 +1098,7 @@ function CardPicker({
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {filtered.map((item) => {
-              const selected = item.id === selectedId;
+              const selected = selectedIds ? selectedIds.includes(item.id) : item.id === selectedId;
               return (
                 <button
                   key={item.id}

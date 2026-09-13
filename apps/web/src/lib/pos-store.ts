@@ -1,8 +1,11 @@
 import { create } from "zustand";
 
+export type MixOilQty = { oilId: string; qtyMl: number };
+
 export type CustomPreview = {
   oilId: string;
   oilName: string;
+  oils?: Array<{ oilId: string; oilName: string; qtyMl: number }>;
   concentrationId: string;
   concentrationName: string;
   bottleId: string;
@@ -29,6 +32,7 @@ export type PosLine =
       unitPrice: number;
       payload: {
         oilId: string;
+        oils?: MixOilQty[];
         concentrationId: string;
         bottleId: string;
         oilActualQtyMl: number;

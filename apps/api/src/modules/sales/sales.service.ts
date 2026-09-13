@@ -7,8 +7,11 @@ import { D, Decimal, money, qty } from "../../common/money";
 import { nextNumber } from "../../common/sequences";
 import { allocateLineDiscounts, settleTender } from "./sale-tender";
 
+type BuiltMixOil = { oilId: string; oilName: string; qtyMl: Decimal };
+
 type BuiltCustom = {
   oilId: string;
+  oils: BuiltMixOil[];
   concentrationId: string;
   bottleId: string;
   bottleSizeMl: number;
@@ -234,6 +237,13 @@ export class SalesService {
               materialCost: line.custom.materialCost.toFixed(4),
               calculatedPrice: line.custom.calculatedPrice.toFixed(4),
               finalPrice: line.custom.calculatedPrice.toFixed(4),
+              oilComponents: {
+                create: line.custom.oils.map((oil, index) => ({
+                  oilId: oil.oilId,
+                  qtyMl: oil.qtyMl.toFixed(4),
+                  sortOrder: index,
+                })),
+              },
             },
           });
           for (const c of line.custom.components) {
@@ -337,7 +347,15 @@ export class SalesService {
             product: true,
             finishedItem: { include: { configuration: { include: { oil: true, concentration: true, bottle: true } } } },
             configuration: {
-              include: { oil: true, concentration: true, bottle: true, pump: true, packaging: true, stabilizer: true },
+              include: {
+                oil: true,
+                concentration: true,
+                bottle: true,
+                pump: true,
+                packaging: true,
+                stabilizer: true,
+                oilComponents: { include: { oil: true }, orderBy: { sortOrder: "asc" } },
+              },
             },
           },
         },
@@ -349,6 +367,11 @@ export class SalesService {
     return {
       oilId: built.oilId,
       oilName: built.oilName,
+      oils: built.oils.map((oil) => ({
+        oilId: oil.oilId,
+        oilName: oil.oilName,
+        qtyMl: qty(oil.qtyMl),
+      })),
       concentrationId: built.concentrationId,
       concentrationName: built.concentrationName,
       bottleId: built.bottleId,
@@ -378,11 +401,26 @@ export class SalesService {
     outletId: string,
     input: PricingPreviewInput & { quantity?: number },
   ): Promise<BuiltCustom> {
-    const oil = await tx.oil.findFirst({
-      where: { id: input.oilId, tenantId, active: true },
+    const mixInput =
+      input.oils?.length
+        ? input.oils
+        : [{ oilId: input.oilId, qtyMl: input.oilActualQtyMl }];
+    const mixOils: BuiltMixOil[] = [];
+    for (const part of mixInput) {
+      const oil = await tx.oil.findFirst({
+        where: { id: part.oilId, tenantId, active: true },
+        include: { inventoryItem: true },
+      });
+      if (!oil) throw new BadRequestException("Oil not found");
+      mixOils.push({ oilId: oil.id, oilName: oil.name, qtyMl: D(part.qtyMl) });
+    }
+    const primaryOilId = mixOils[0]!.oilId;
+    const oilRows = await tx.oil.findMany({
+      where: { id: { in: mixOils.map((oil) => oil.oilId) }, tenantId, active: true },
       include: { inventoryItem: true },
     });
-    if (!oil) throw new BadRequestException("Oil not found");
+    const oilById = new Map(oilRows.map((oil) => [oil.id, oil]));
+
     const concentration = await tx.concentration.findFirst({
       where: { id: input.concentrationId, tenantId, active: true },
     });
@@ -400,7 +438,7 @@ export class SalesService {
     if (!alcohol) throw new BadRequestException("No alcohol is configured");
 
     const oilStandard = D(bottle.sizeMl).mul(concentration.oilPercentage).div(100);
-    const oilActual = D(input.oilActualQtyMl);
+    const oilActual = mixOils.reduce((sum, oil) => sum.add(oil.qtyMl), D(0));
     const stabilizerQty = D(input.stabilizerQtyMl ?? 0);
     const alcoholQty = D(bottle.sizeMl).sub(oilActual).sub(stabilizerQty);
     if (alcoholQty.lt(0) || oilActual.add(stabilizerQty).gt(bottle.sizeMl)) {
@@ -430,7 +468,11 @@ export class SalesService {
     }
 
     const components: BuiltCustom["components"] = [
-      { itemId: oil.inventoryItemId, quantity: oilActual, unit: "ML" },
+      ...mixOils.map((part) => {
+        const oil = oilById.get(part.oilId);
+        if (!oil) throw new BadRequestException("Oil not found");
+        return { itemId: oil.inventoryItemId, quantity: part.qtyMl, unit: "ML" as const };
+      }),
       { itemId: alcohol.inventoryItemId, quantity: alcoholQty, unit: "ML" },
     ];
     if (stabilizer) {
@@ -457,7 +499,8 @@ export class SalesService {
     const calculatedPrice = materialCost.mul(D(1).add(markup.div(100)));
 
     return {
-      oilId: oil.id,
+      oilId: primaryOilId,
+      oils: mixOils,
       concentrationId: concentration.id,
       bottleId: bottle.id,
       bottleSizeMl: bottle.sizeMl,
@@ -472,7 +515,7 @@ export class SalesService {
       materialCost,
       calculatedPrice,
       components,
-      oilName: oil.name,
+      oilName: mixOils.map((oil) => oil.oilName).join(" + "),
       concentrationName: concentration.name,
       bottleDesign: bottle.design,
     };

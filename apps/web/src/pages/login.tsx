@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { Button, Input, Label, PasswordInput } from "@/components/ui";
+import { BrandName, Button, Input, Label, PasswordInput } from "@/components/ui";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import type { MessageKey } from "@/lib/locales";
 import { homePathForUser } from "@/lib/staff-pages";
@@ -57,7 +57,7 @@ export function LoginPage() {
       <div className="flex min-h-screen items-center justify-center bg-ink p-4 sm:p-6" style={{ paddingLeft: "max(1rem, env(safe-area-inset-left))", paddingRight: "max(1rem, env(safe-area-inset-right))" }}>
         <div className="w-full max-w-md rounded-3xl bg-paper p-8 shadow-2xl">
           <div className="flex items-start justify-between gap-3">
-            <div className="font-serif text-3xl text-ink">{t("appName")}</div>
+            <BrandName className="text-3xl text-ink" />
             <LanguageSwitcher />
           </div>
           <h1 className="mt-6 font-serif text-2xl">{t("license.renewTitle")}</h1>
@@ -79,7 +79,7 @@ export function LoginPage() {
         }}
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="font-serif text-3xl text-ink">{t("appName")}</div>
+          <BrandName className="text-3xl text-ink" />
           <LanguageSwitcher />
         </div>
         {tenant?.name ? <p className="mt-2 text-sm text-gold">{tenant.name}</p> : null}

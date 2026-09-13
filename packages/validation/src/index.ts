@@ -287,9 +287,21 @@ export const adjustmentSchema = z.object({
   unitCost: z.number().nonnegative().optional(),
 });
 
+const mixOilSchema = z.object({
+  oilId: z.string().min(1),
+  qtyMl: z.number().positive(),
+});
+
+function uniqueMixOils(oils: { oilId: string }[] | undefined) {
+  if (!oils?.length) return true;
+  const ids = oils.map((oil) => oil.oilId);
+  return new Set(ids).size === ids.length;
+}
+
 export const customizedLineSchema = z.object({
   lineType: z.literal("CUSTOMIZED"),
   oilId: z.string().min(1),
+  oils: z.array(mixOilSchema).min(1).optional(),
   concentrationId: z.string().min(1),
   bottleId: z.string().min(1),
   oilActualQtyMl: z.number().positive(),
@@ -325,10 +337,21 @@ export const createSaleSchema = z.object({
   paymentReference: z.string().optional(),
   amountReceived: z.number().nonnegative().optional(),
   lines: z.array(saleLineSchema).min(1),
+}).superRefine((value, ctx) => {
+  value.lines.forEach((line, index) => {
+    if (line.lineType === "CUSTOMIZED" && !uniqueMixOils(line.oils)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Mix oils must be unique",
+        path: ["lines", index, "oils"],
+      });
+    }
+  });
 });
 
 export const pricingPreviewSchema = z.object({
   oilId: z.string().min(1),
+  oils: z.array(mixOilSchema).min(1).optional(),
   concentrationId: z.string().min(1),
   bottleId: z.string().min(1),
   oilActualQtyMl: z.number().positive(),
@@ -336,7 +359,7 @@ export const pricingPreviewSchema = z.object({
   stabilizerQtyMl: z.number().nonnegative().optional(),
   packagingId: z.string().optional(),
   customerSuppliedBottle: z.boolean().default(false),
-});
+}).refine((value) => uniqueMixOils(value.oils), { message: "Mix oils must be unique", path: ["oils"] });
 
 export const returnLineSchema = z.object({
   originalOrderLineId: z.string().min(1),

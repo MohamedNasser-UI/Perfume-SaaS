@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { liveApi } from "@/lib/http";
 import { useI18n } from "@/lib/i18n";
-import { Button, Label, PasswordInput } from "@/components/ui";
+import { BrandName, Button, Label, PasswordInput } from "@/components/ui";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 export function ResetPasswordPage() {
@@ -39,7 +39,7 @@ export function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-ink p-4 sm:p-6">
       <form onSubmit={onSubmit} className="w-full max-w-md rounded-3xl bg-paper p-8 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
-          <div className="font-serif text-3xl text-ink">{t("appName")}</div>
+          <BrandName className="text-3xl text-ink" />
           <LanguageSwitcher />
         </div>
         <h1 className="mt-6 font-serif text-2xl">{t("auth.resetTitle")}</h1>
