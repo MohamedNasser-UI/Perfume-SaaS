@@ -20,6 +20,9 @@ export type ItemType = (typeof ITEM_TYPES)[number];
 export const PRODUCT_CLASSIFICATIONS = ["CUSTOMIZED", "ORIGINAL", "HIGH_COPY", "OTHER"] as const;
 export type ProductClassification = (typeof PRODUCT_CLASSIFICATIONS)[number];
 
+export const PRICING_TIERS = ["ECONOMY", "STANDARD", "PREMIUM", "NICHE", "LUXURY"] as const;
+export type PricingTier = (typeof PRICING_TIERS)[number];
+
 export const MOVEMENT_TYPES = [
   "OPENING_BALANCE",
   "PURCHASE_RECEIPT",
@@ -91,3 +94,5 @@ export type OutletPublic = {
   phone: string | null;
   active: boolean;
 };
+
+export { resolveOilTierMarkup, type TierMarkupRow } from "./pricing-tier";

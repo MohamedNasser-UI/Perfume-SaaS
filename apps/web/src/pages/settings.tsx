@@ -23,18 +23,23 @@ export function SettingsPage() {
   const { data } = useQuery({ queryKey: ["settings"], queryFn: () => api<any>("/settings") });
   const outlets = useQuery({ queryKey: ["outlets"], queryFn: () => api<any[]>("/outlets") });
   const users = useQuery({ queryKey: ["users"], queryFn: () => api<any[]>("/users") });
-  const [markup, setMarkup] = useState<number>();
+  const [tierMarkups, setTierMarkups] = useState<Record<string, number> | null>(null);
+  const [oilTiersOpen, setOilTiersOpen] = useState(false);
   const [outletName, setOutletName] = useState("");
   const [userForm, setUserForm] = useState({ email: "", displayName: "", password: "", role: "STAFF", outletId: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const currentTheme = (tenant?.theme ?? data?.profile?.theme ?? "gold") as ThemeId;
 
   const saveMarkup = useMutation({
-    mutationFn: () => api("/settings/pricing", { method: "PATCH", body: JSON.stringify({ markupPercentage: markup }) }),
+    mutationFn: () => {
+      const markups = tierMarkups ?? markupMapFromSettings(data);
+      return api("/settings/pricing", { method: "PATCH", body: JSON.stringify({ markups }) });
+    },
     onSuccess: () => {
       toast.success(t("settings.markupUpdated"));
       qc.invalidateQueries({ queryKey: ["settings"] });
     },
+    onError: (e: Error) => toast.error(e.message),
   });
   const addOutlet = useMutation({
     mutationFn: () => api("/outlets", { method: "POST", body: JSON.stringify({ name: outletName }) }),
@@ -99,9 +104,11 @@ export function SettingsPage() {
   });
 
   if (!data) return <div>{t("loading")}</div>;
+  const markups = tierMarkups ?? markupMapFromSettings(data);
   return (
     <div>
       <PageHeader title={t("settings.title")} />
+      {oilTiersOpen ? <OilPriceTiersPanel onClose={() => setOilTiersOpen(false)} /> : null}
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_12.5rem_minmax(0,1.45fr)] md:items-stretch">
         <Card className="flex flex-col justify-center">
           <h3 className="mb-1 font-semibold">{t("settings.profile")}</h3>
@@ -218,14 +225,34 @@ export function SettingsPage() {
         </Card>
       </div>
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
-        <Card className="flex h-full flex-col space-y-2">
+        <Card className="flex h-full flex-col space-y-3">
           <h3 className="font-semibold">{t("settings.markup")}</h3>
-          <Input
-            type="number"
-            defaultValue={Number(data.pricing?.markupPercentage ?? 50)}
-            onChange={(e) => setMarkup(Number(e.target.value))}
-          />
-          <Button className="mt-auto w-fit" onClick={() => saveMarkup.mutate()}>{t("settings.saveMarkup")}</Button>
+          <div className="space-y-2">
+            {PRICING_TIER_OPTIONS.map((tier) => (
+              <div key={tier} className="flex items-center gap-3">
+                <Label className="min-w-24">{t(tierLabelKey(tier))}</Label>
+                <Input
+                  type="number"
+                  className="flex-1"
+                  value={markups[tier]}
+                  onChange={(e) =>
+                    setTierMarkups({
+                      ...markups,
+                      [tier]: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-auto flex flex-wrap gap-2">
+            <Button className="w-fit" onClick={() => saveMarkup.mutate()}>
+              {t("settings.saveTierMarkups")}
+            </Button>
+            <Button type="button" variant="outline" className="w-fit" onClick={() => setOilTiersOpen(true)}>
+              {t("settings.viewOilPriceTiers")}
+            </Button>
+          </div>
         </Card>
         <Card className="flex h-full flex-col">
           <h3 className="mb-3 font-semibold">{t("settings.payments")}</h3>
@@ -629,5 +656,95 @@ function DevicesCard() {
         </>
       ) : null}
     </Card>
+  );
+}
+
+const PRICING_TIER_OPTIONS = ["ECONOMY", "STANDARD", "PREMIUM", "NICHE", "LUXURY"] as const;
+type PricingTierCode = (typeof PRICING_TIER_OPTIONS)[number];
+
+function tierLabelKey(tier: PricingTierCode): MessageKey {
+  const map: Record<PricingTierCode, MessageKey> = {
+    ECONOMY: "products.tierEconomy",
+    STANDARD: "products.tierStandard",
+    PREMIUM: "products.tierPremium",
+    NICHE: "products.tierNiche",
+    LUXURY: "products.tierLuxury",
+  };
+  return map[tier];
+}
+
+function markupMapFromSettings(data: any): Record<PricingTierCode, number> {
+  const rows = (data?.pricingTierMarkups ?? []) as Array<{ tier: string; markupPercentage: string | number }>;
+  const legacy = Number(data?.pricing?.markupPercentage ?? 50);
+  const map = Object.fromEntries(PRICING_TIER_OPTIONS.map((tier) => [tier, legacy])) as Record<PricingTierCode, number>;
+  for (const row of rows) {
+    if (PRICING_TIER_OPTIONS.includes(row.tier as PricingTierCode)) {
+      map[row.tier as PricingTierCode] = Number(row.markupPercentage);
+    }
+  }
+  return map;
+}
+
+function OilPriceTiersPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const oils = useQuery({ queryKey: ["/oils"], queryFn: () => api<any[]>("/oils") });
+
+  const setTier = useMutation({
+    mutationFn: ({ id, pricingTier }: { id: string; pricingTier: PricingTierCode | null }) =>
+      api(`/oils/${id}`, { method: "PATCH", body: JSON.stringify({ pricingTier }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/oils"] });
+      qc.invalidateQueries({ queryKey: ["oils"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-3">
+      <Card className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden p-0">
+        <div className="flex items-center gap-3 border-b px-4 py-3">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            {t("back")}
+          </Button>
+          <div>
+            <h2 className="font-serif text-2xl">{t("settings.oilPriceTiersTitle")}</h2>
+            <p className="text-sm text-stone-500">{t("settings.oilPriceTiersHint")}</p>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 space-y-2 overflow-auto p-4">
+          {(oils.data ?? []).map((oil) => (
+            <div key={oil.id} className="flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200 p-3">
+              <div className="min-w-40 flex-1 font-medium">
+                {oil.name}
+                <span className="ms-2 text-xs text-stone-500">{oil.code}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {PRICING_TIER_OPTIONS.map((tier) => {
+                  const selected = oil.pricingTier === tier;
+                  return (
+                    <button
+                      key={tier}
+                      type="button"
+                      disabled={setTier.isPending}
+                      onClick={() => setTier.mutate({ id: oil.id, pricingTier: selected ? null : tier })}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                        selected
+                          ? "bg-ink text-white"
+                          : "border border-stone-300 bg-stone-100 text-stone-400 hover:bg-stone-50 hover:text-ink",
+                      )}
+                    >
+                      {t(tierLabelKey(tier))}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {!oils.data?.length ? <p className="text-sm text-stone-500">{t("none")}</p> : null}
+        </div>
+      </Card>
+    </div>
   );
 }

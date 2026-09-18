@@ -135,6 +135,7 @@ export const oilSchema = z.object({
   name: z.string().min(1),
   active: z.boolean().default(true),
   lowStockThreshold: z.number().nonnegative().optional(),
+  pricingTier: z.enum(["ECONOMY", "STANDARD", "PREMIUM", "NICHE", "LUXURY"]).nullable().optional(),
 });
 
 export const bottleSchema = z.object({
@@ -171,7 +172,9 @@ export const othersSchema = z.object({
   active: z.boolean().default(true),
 });
 
-export const oilUpdateSchema = oilSchema.pick({ name: true, active: true, lowStockThreshold: true }).partial();
+export const oilUpdateSchema = oilSchema
+  .pick({ name: true, active: true, lowStockThreshold: true, pricingTier: true })
+  .partial();
 export const pumpUpdateSchema = pumpSchema.pick({ name: true, active: true }).partial();
 export const bottleUpdateSchema = bottleSchema
   .pick({ design: true, sizeMl: true, active: true })
@@ -188,7 +191,13 @@ export const concentrationSchema = z.object({
 });
 
 export const markupSchema = z.object({
-  markupPercentage: z.number().nonnegative(),
+  markups: z.object({
+    ECONOMY: z.number().nonnegative(),
+    STANDARD: z.number().nonnegative(),
+    PREMIUM: z.number().nonnegative(),
+    NICHE: z.number().nonnegative(),
+    LUXURY: z.number().nonnegative(),
+  }),
 });
 
 export const themeSchema = z.object({

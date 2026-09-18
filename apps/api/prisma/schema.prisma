@@ -43,6 +43,14 @@ enum ProductClassification {
   OTHER
 }
 
+enum PricingTier {
+  ECONOMY
+  STANDARD
+  PREMIUM
+  NICHE
+  LUXURY
+}
+
 enum MovementType {
   OPENING_BALANCE
   PURCHASE_RECEIPT
@@ -163,6 +171,7 @@ model Tenant {
   products             Product[]
   concentrations       Concentration[]
   pricingConfig        PricingConfiguration?
+  pricingTierMarkups   PricingTierMarkup[]
   discounts            DiscountConfiguration[]
   paymentMethods       PaymentMethod[]
   customers            Customer[]
@@ -448,13 +457,14 @@ model InventoryMovement {
 }
 
 model Oil {
-  id               String   @id @default(cuid())
-  tenantId         String   @map("tenant_id")
-  inventoryItemId  String   @unique @map("inventory_item_id")
+  id               String       @id @default(cuid())
+  tenantId         String       @map("tenant_id")
+  inventoryItemId  String       @unique @map("inventory_item_id")
   code             String
   name             String
-  active           Boolean  @default(true)
-  createdAt        DateTime @default(now()) @map("created_at")
+  pricingTier     PricingTier? @map("pricing_tier")
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now()) @map("created_at")
 
   tenant        Tenant                  @relation(fields: [tenantId], references: [id])
   inventoryItem InventoryItem           @relation(fields: [inventoryItemId], references: [id])
@@ -599,6 +609,18 @@ model PricingConfiguration {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("pricing_configurations")
+}
+
+model PricingTierMarkup {
+  id               String      @id @default(cuid())
+  tenantId         String      @map("tenant_id")
+  tier             PricingTier
+  markupPercentage Decimal     @map("markup_percentage") @db.Decimal(8, 4)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, tier])
+  @@map("pricing_tier_markups")
 }
 
 model DiscountConfiguration {
@@ -852,10 +874,11 @@ model CustomizedConfiguration {
   stabilizerQtyMl         Decimal @default(0) @map("stabilizer_qty_ml") @db.Decimal(18, 4)
   pumpId                  String? @map("pump_id")
   packagingId             String? @map("packaging_id")
-  customerSuppliedBottle  Boolean @default(false) @map("customer_supplied_bottle")
-  materialCost            Decimal @map("material_cost") @db.Decimal(18, 4)
-  calculatedPrice         Decimal @map("calculated_price") @db.Decimal(18, 4)
-  finalPrice              Decimal @map("final_price") @db.Decimal(18, 4)
+  customerSuppliedBottle  Boolean      @default(false) @map("customer_supplied_bottle")
+  materialCost            Decimal      @map("material_cost") @db.Decimal(18, 4)
+  calculatedPrice         Decimal      @map("calculated_price") @db.Decimal(18, 4)
+  finalPrice              Decimal      @map("final_price") @db.Decimal(18, 4)
+  pricingTier             PricingTier? @map("pricing_tier")
 
   line         SalesOrderLine           @relation(fields: [salesOrderLineId], references: [id])
   oil          Oil                      @relation(fields: [oilId], references: [id])

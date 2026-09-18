@@ -1,4 +1,5 @@
 import { offlineDb } from "./offline-db";
+import { resolveOilTierMarkup } from "./pricing-tier";
 
 type SnapshotInventory = {
   itemId: string;
@@ -88,8 +89,13 @@ export async function previewCustomizedLocal(payload: {
       shortages.push({ itemName: c.itemName, shortage: c.quantity - available, unit: c.unit });
     }
   }
-  const markup = Number(settings?.pricing?.markupPercentage ?? 50);
-  const calculatedPrice = materialCost * (1 + markup / 100);
+  const legacyFallback = Number(settings?.pricing?.markupPercentage ?? 50);
+  const resolved = resolveOilTierMarkup(
+    mixRows.map((part) => part.oil.pricingTier),
+    settings?.pricingTierMarkups,
+    legacyFallback,
+  );
+  const calculatedPrice = materialCost * (1 + resolved.markupPercentage / 100);
 
   return {
     oilId: mixRows[0]!.oil.id,
@@ -107,6 +113,7 @@ export async function previewCustomizedLocal(payload: {
     stabilizerQtyMl: stabilizerQty,
     packagingId: pack?.id,
     customerSuppliedBottle: Boolean(payload.customerSuppliedBottle),
+    pricingTier: resolved.tier,
     materialCost: Math.round(materialCost * 100) / 100,
     calculatedPrice: Math.round(calculatedPrice * 100) / 100,
     shortages,

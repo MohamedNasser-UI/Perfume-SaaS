@@ -16,6 +16,16 @@ export async function seedTenantDefaults(
     data: { tenantId, markupPercentage: 50, active: true },
   });
 
+  await tx.pricingTierMarkup.createMany({
+    data: [
+      { tenantId, tier: "ECONOMY", markupPercentage: 50 },
+      { tenantId, tier: "STANDARD", markupPercentage: 50 },
+      { tenantId, tier: "PREMIUM", markupPercentage: 50 },
+      { tenantId, tier: "NICHE", markupPercentage: 50 },
+      { tenantId, tier: "LUXURY", markupPercentage: 50 },
+    ],
+  });
+
   await tx.discountConfiguration.createMany({
     data: [
       { tenantId, name: "5%", percentage: 5, active: true },

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { Prisma, PricingTier } from "@prisma/client";
+import { resolveOilTierMarkup } from "@perfume/types";
 import { CreateSaleInput, PricingPreviewInput } from "@perfume/validation";
 import { PrismaService } from "../../prisma/prisma.service";
 import { InventoryService } from "../inventory/inventory.service";
@@ -7,7 +8,7 @@ import { D, Decimal, money, qty } from "../../common/money";
 import { nextNumber } from "../../common/sequences";
 import { allocateLineDiscounts, settleTender } from "./sale-tender";
 
-type BuiltMixOil = { oilId: string; oilName: string; qtyMl: Decimal };
+type BuiltMixOil = { oilId: string; oilName: string; qtyMl: Decimal; pricingTier?: PricingTier | null };
 
 type BuiltCustom = {
   oilId: string;
@@ -25,6 +26,7 @@ type BuiltCustom = {
   customerSuppliedBottle: boolean;
   materialCost: Decimal;
   calculatedPrice: Decimal;
+  pricingTier: PricingTier;
   components: { itemId: string; quantity: Decimal; unit: "ML" | "PCS" }[];
   oilName: string;
   concentrationName: string;
@@ -76,7 +78,8 @@ export class SalesService {
       }
 
       const pricing = await tx.pricingConfiguration.findUnique({ where: { tenantId } });
-      if (!pricing) throw new BadRequestException("Markup is not configured");
+      const tierMarkups = await tx.pricingTierMarkup.findMany({ where: { tenantId } });
+      if (!pricing && !tierMarkups.length) throw new BadRequestException("Markup is not configured");
 
       const activeDiscounts = await tx.discountConfiguration.findMany({ where: { tenantId, active: true } });
       const maxDiscountPct = activeDiscounts.reduce((max, d) => Decimal.max(max, D(d.percentage)), D(0));
@@ -237,6 +240,7 @@ export class SalesService {
               materialCost: line.custom.materialCost.toFixed(4),
               calculatedPrice: line.custom.calculatedPrice.toFixed(4),
               finalPrice: line.custom.calculatedPrice.toFixed(4),
+              pricingTier: line.custom.pricingTier,
               oilComponents: {
                 create: line.custom.oils.map((oil, index) => ({
                   oilId: oil.oilId,
@@ -385,6 +389,7 @@ export class SalesService {
       pumpId: built.pumpId,
       packagingId: built.packagingId,
       customerSuppliedBottle: built.customerSuppliedBottle,
+      pricingTier: built.pricingTier,
       materialCost: money(built.materialCost, 2),
       calculatedPrice: money(built.calculatedPrice, 2),
       components: built.components.map((c) => ({
@@ -412,7 +417,7 @@ export class SalesService {
         include: { inventoryItem: true },
       });
       if (!oil) throw new BadRequestException("Oil not found");
-      mixOils.push({ oilId: oil.id, oilName: oil.name, qtyMl: D(part.qtyMl) });
+      mixOils.push({ oilId: oil.id, oilName: oil.name, qtyMl: D(part.qtyMl), pricingTier: oil.pricingTier });
     }
     const primaryOilId = mixOils[0]!.oilId;
     const oilRows = await tx.oil.findMany({
@@ -494,8 +499,26 @@ export class SalesService {
       materialCost = materialCost.add(avg.mul(c.quantity));
     }
 
-    const pricing = await tx.pricingConfiguration.findUnique({ where: { tenantId } });
-    const markup = D(pricing?.markupPercentage ?? 50);
+    const tierRows = await tx.pricingTierMarkup.findMany({ where: { tenantId } });
+    const legacy = await tx.pricingConfiguration.findUnique({ where: { tenantId } });
+    const fallback = Number(legacy?.markupPercentage ?? 50);
+    if (!tierRows.length) {
+      // Backfill from legacy global so first customized sale after upgrade still works.
+      for (const tier of ["ECONOMY", "STANDARD", "PREMIUM", "NICHE", "LUXURY"] as PricingTier[]) {
+        await tx.pricingTierMarkup.upsert({
+          where: { tenantId_tier: { tenantId, tier } },
+          update: {},
+          create: { tenantId, tier, markupPercentage: fallback },
+        });
+      }
+    }
+    const markups = await tx.pricingTierMarkup.findMany({ where: { tenantId } });
+    const resolved = resolveOilTierMarkup(
+      mixOils.map((oil) => oil.pricingTier),
+      markups.map((row) => ({ tier: row.tier, markupPercentage: Number(row.markupPercentage) })),
+      fallback,
+    );
+    const markup = D(resolved.markupPercentage);
     const calculatedPrice = materialCost.mul(D(1).add(markup.div(100)));
 
     return {
@@ -514,6 +537,7 @@ export class SalesService {
       customerSuppliedBottle: input.customerSuppliedBottle,
       materialCost,
       calculatedPrice,
+      pricingTier: resolved.tier,
       components,
       oilName: mixOils.map((oil) => oil.oilName).join(" + "),
       concentrationName: concentration.name,

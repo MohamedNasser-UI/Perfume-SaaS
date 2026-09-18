@@ -1,21 +1,46 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { Prisma, PricingTier } from "@prisma/client";
+import { PRICING_TIERS } from "@perfume/types";
 import { PrismaService } from "../../prisma/prisma.service";
 import { D } from "../../common/money";
+
+const ALL_TIERS = [...PRICING_TIERS] as PricingTier[];
 
 @Injectable()
 export class ConfigurationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async get(tenantId: string) {
-    const [concentrations, pricing, discounts, paymentMethods, profile] = await Promise.all([
+    const [concentrations, pricing, discounts, paymentMethods, profile, pricingTierMarkups] = await Promise.all([
       this.prisma.concentration.findMany({ where: { tenantId }, orderBy: { oilPercentage: "asc" } }),
       this.prisma.pricingConfiguration.findUnique({ where: { tenantId } }),
       this.prisma.discountConfiguration.findMany({ where: { tenantId }, orderBy: { percentage: "asc" } }),
       this.prisma.paymentMethod.findMany({ where: { tenantId }, orderBy: { name: "asc" } }),
       this.prisma.tenant.findUnique({ where: { id: tenantId } }),
+      this.ensureTierMarkups(tenantId),
     ]);
-    return { profile, concentrations, pricing, discounts, paymentMethods };
+    return { profile, concentrations, pricing, discounts, paymentMethods, pricingTierMarkups };
+  }
+
+  /** Ensure all five tier markup rows exist; seed from legacy global markup when missing. */
+  async ensureTierMarkups(tenantId: string) {
+    const existing = await this.prisma.pricingTierMarkup.findMany({ where: { tenantId } });
+    if (existing.length >= ALL_TIERS.length) {
+      return existing.sort((a, b) => ALL_TIERS.indexOf(a.tier) - ALL_TIERS.indexOf(b.tier));
+    }
+    const pricing = await this.prisma.pricingConfiguration.findUnique({ where: { tenantId } });
+    const fallback = Number(pricing?.markupPercentage ?? 50);
+    const have = new Set(existing.map((row) => row.tier));
+    for (const tier of ALL_TIERS) {
+      if (have.has(tier)) continue;
+      await this.prisma.pricingTierMarkup.upsert({
+        where: { tenantId_tier: { tenantId, tier } },
+        update: {},
+        create: { tenantId, tier, markupPercentage: fallback },
+      });
+    }
+    const rows = await this.prisma.pricingTierMarkup.findMany({ where: { tenantId } });
+    return rows.sort((a, b) => ALL_TIERS.indexOf(a.tier) - ALL_TIERS.indexOf(b.tier));
   }
 
   async updateProfile(
@@ -92,22 +117,37 @@ export class ConfigurationService {
     return updated;
   }
 
-  async updateMarkup(tenantId: string, userId: string, markupPercentage: number) {
-    const before = await this.prisma.pricingConfiguration.findUnique({ where: { tenantId } });
-    const updated = await this.prisma.pricingConfiguration.upsert({
+  async updateTierMarkups(
+    tenantId: string,
+    userId: string,
+    markups: Record<(typeof PRICING_TIERS)[number], number>,
+  ) {
+    const before = await this.ensureTierMarkups(tenantId);
+    const beforeMap = Object.fromEntries(before.map((row) => [row.tier, Number(row.markupPercentage)]));
+    for (const tier of ALL_TIERS) {
+      const value = markups[tier];
+      await this.prisma.pricingTierMarkup.upsert({
+        where: { tenantId_tier: { tenantId, tier } },
+        update: { markupPercentage: value },
+        create: { tenantId, tier, markupPercentage: value },
+      });
+    }
+    // Keep legacy global row as STANDARD mirror for older readers.
+    await this.prisma.pricingConfiguration.upsert({
       where: { tenantId },
-      update: { markupPercentage, effectiveFrom: new Date() },
-      create: { tenantId, markupPercentage },
+      update: { markupPercentage: markups.STANDARD, effectiveFrom: new Date() },
+      create: { tenantId, markupPercentage: markups.STANDARD },
     });
+    const updated = await this.ensureTierMarkups(tenantId);
     await this.prisma.auditLog.create({
       data: {
         tenantId,
         userId,
         action: "UPDATE",
-        entity: "MARKUP",
-        entityId: updated.id,
-        before: { markupPercentage: before ? Number(before.markupPercentage) : null },
-        after: { markupPercentage },
+        entity: "PRICING_TIER_MARKUPS",
+        entityId: tenantId,
+        before: beforeMap,
+        after: markups,
       },
     });
     return updated;

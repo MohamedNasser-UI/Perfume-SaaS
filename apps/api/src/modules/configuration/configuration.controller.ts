@@ -58,9 +58,9 @@ export class ConfigurationController {
   markup(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
-    @Body(new ZodPipe(markupSchema)) body: { markupPercentage: number },
+    @Body(new ZodPipe(markupSchema)) body: { markups: Record<"ECONOMY" | "STANDARD" | "PREMIUM" | "NICHE" | "LUXURY", number> },
   ) {
-    return this.config.updateMarkup(tenantId, user.id, body.markupPercentage);
+    return this.config.updateTierMarkups(tenantId, user.id, body.markups);
   }
 
   @RequirePage("settings")

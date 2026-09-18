@@ -161,6 +161,19 @@ function SimpleMaster({ path, fields }: { path: string; fields: string[] }) {
           <div key={r.id} className="flex items-center gap-3 border-b py-2 text-sm last:border-0">
             <div className="min-w-0 flex-1">
               {r.code} · {r.name || r.design}
+              {path === "/oils" && r.pricingTier ? (
+                <span className="ms-2 text-xs text-stone-500">
+                  {t(
+                    ({
+                      ECONOMY: "products.tierEconomy",
+                      STANDARD: "products.tierStandard",
+                      PREMIUM: "products.tierPremium",
+                      NICHE: "products.tierNiche",
+                      LUXURY: "products.tierLuxury",
+                    } as Record<string, MessageKey>)[r.pricingTier] ?? "products.tierUnset",
+                  )}
+                </span>
+              ) : null}
             </div>
             <CatalogRowActions
               onEdit={() => {

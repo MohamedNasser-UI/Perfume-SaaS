@@ -6,6 +6,32 @@ import { Button, Card, Input, Label, PageHeader, Select } from "@/components/ui"
 import { money } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/locales";
+
+function configOilName(cfg: {
+  oil?: { name: string };
+  oilComponents?: Array<{ oil: { name: string } }>;
+}) {
+  if (cfg.oilComponents && cfg.oilComponents.length > 1) {
+    return cfg.oilComponents.map((c) => c.oil.name).join(" + ");
+  }
+  return cfg.oil?.name ?? "";
+}
+
+function returnLineLabel(
+  line: any,
+  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+) {
+  const cfg = line.configuration ?? line.finishedItem?.configuration;
+  if (cfg?.concentration?.name != null && cfg.bottleSizeMl != null) {
+    return t("sales.recipe", {
+      oil: configOilName(cfg),
+      concentration: cfg.concentration.name,
+      size: cfg.bottleSizeMl,
+    });
+  }
+  return line.product?.name ?? line.lineType;
+}
 
 export function ReturnsPage() {
   const { tenant } = useAuth();
@@ -65,6 +91,7 @@ export function ReturnsPage() {
               <div className="font-medium">
                 {t("returns.remaining", { type: l.lineType, qty: l.quantity - l.returnedQty })}
               </div>
+              <div className="mt-1 text-stone-600">{returnLineLabel(l, t)}</div>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <Input
                   type="number"
@@ -88,7 +115,6 @@ export function ReturnsPage() {
                 >
                   <option value="RETURN_TO_FINISHED_STOCK">{t("returns.toStock")}</option>
                   <option value="DAMAGED">{t("returns.damaged")}</option>
-                  <option value="DISPOSED">{t("returns.disposed")}</option>
                 </Select>
               </div>
             </div>

@@ -136,21 +136,37 @@ export class CatalogService {
     });
   }
 
-  async updateOil(tenantId: string, id: string, data: { name?: string; active?: boolean; lowStockThreshold?: number }) {
+  async updateOil(
+    tenantId: string,
+    id: string,
+    data: {
+      name?: string;
+      active?: boolean;
+      lowStockThreshold?: number;
+      pricingTier?: "ECONOMY" | "STANDARD" | "PREMIUM" | "NICHE" | "LUXURY" | null;
+    },
+  ) {
     const oil = await this.prisma.oil.findFirst({ where: { id, tenantId } });
     if (!oil) throw new NotFoundException();
+    const touchItem =
+      data.name !== undefined || data.active !== undefined || data.lowStockThreshold !== undefined;
     return this.prisma.oil.update({
       where: { id },
       data: {
         name: data.name,
         active: data.active,
-        inventoryItem: {
-          update: {
-            name: data.name,
-            active: data.active,
-            lowStockThreshold: data.lowStockThreshold,
-          },
-        },
+        ...(data.pricingTier !== undefined ? { pricingTier: data.pricingTier } : {}),
+        ...(touchItem
+          ? {
+              inventoryItem: {
+                update: {
+                  name: data.name,
+                  active: data.active,
+                  lowStockThreshold: data.lowStockThreshold,
+                },
+              },
+            }
+          : {}),
       },
       include: { inventoryItem: true },
     });
