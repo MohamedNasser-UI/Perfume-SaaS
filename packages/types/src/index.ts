@@ -44,6 +44,9 @@ export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
 export const SALES_STATUSES = ["COMPLETED", "RETURNED", "PARTIALLY_RETURNED"] as const;
 export type SalesStatus = (typeof SALES_STATUSES)[number];
 
+export const SALES_CHANNELS = ["IN_SHOP", "ONLINE"] as const;
+export type SalesChannel = (typeof SALES_CHANNELS)[number];
+
 export const LINE_TYPES = ["CUSTOMIZED", "ORIGINAL", "HIGH_COPY", "FINISHED_CUSTOMIZED", "OTHER"] as const;
 export type LineType = (typeof LINE_TYPES)[number];
 

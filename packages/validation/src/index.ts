@@ -344,6 +344,7 @@ export const createSaleSchema = z.object({
   discountId: z.string().optional(),
   paymentMethodId: z.string().min(1),
   paymentReference: z.string().optional(),
+  salesChannel: z.enum(["IN_SHOP", "ONLINE"]).default("IN_SHOP"),
   amountReceived: z.number().nonnegative().optional(),
   lines: z.array(saleLineSchema).min(1),
 }).superRefine((value, ctx) => {

@@ -9,28 +9,71 @@ import { canSeeItemCost } from "@/lib/staff-pages";
 import { useState } from "react";
 import { paginate, TablePager } from "@/components/table-pager";
 
+type SalesChannel = "IN_SHOP" | "ONLINE";
+
+function channelLabel(channel: string | undefined, t: (key: "sales.channelInShop" | "sales.channelOnline") => string) {
+  return channel === "ONLINE" ? t("sales.channelOnline") : t("sales.channelInShop");
+}
+
 export function SalesListPage() {
   const { tenant } = useAuth();
   const { t, locale } = useI18n();
   const [q, setQ] = useState("");
+  const [channel, setChannel] = useState<"ALL" | SalesChannel>("ALL");
   const [page, setPage] = useState(1);
+  const channelParam = channel === "ALL" ? "" : `&salesChannel=${channel}`;
   const { data } = useQuery({
-    queryKey: ["sales", q],
-    queryFn: () => api<Array<{ id: string; orderNumber: string; createdAt: string; finalAmount: string; status: string; customer: { name: string; mobile: string }; paymentMethod: { name: string } }>>(`/sales?q=${encodeURIComponent(q)}`),
+    queryKey: ["sales", q, channel],
+    queryFn: () =>
+      api<
+        Array<{
+          id: string;
+          orderNumber: string;
+          createdAt: string;
+          finalAmount: string;
+          status: string;
+          salesChannel?: SalesChannel;
+          customer: { name: string; mobile: string };
+          paymentMethod: { name: string };
+        }>
+      >(`/sales?q=${encodeURIComponent(q)}${channelParam}`),
   });
   const paged = paginate(data ?? [], page);
   return (
     <div>
       <PageHeader title={t("sales.title")} actions={<Link to="/sales/new"><Button>{t("sales.new")}</Button></Link>} />
-      <Input
-        className="mb-4 max-w-sm"
-        placeholder={t("sales.search")}
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Input
+          className="max-w-sm"
+          placeholder={t("sales.search")}
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+        />
+        <div className="flex gap-2">
+          {(
+            [
+              ["ALL", "sales.channelAll"],
+              ["IN_SHOP", "sales.channelInShop"],
+              ["ONLINE", "sales.channelOnline"],
+            ] as const
+          ).map(([value, key]) => (
+            <Button
+              key={value}
+              type="button"
+              variant={channel === value ? "primary" : "outline"}
+              onClick={() => {
+                setChannel(value);
+                setPage(1);
+              }}
+            >
+              {t(key)}
+            </Button>
+          ))}
+        </div>
+      </div>
       <Card className="overflow-auto p-0">
         <table className="w-full text-sm">
           <thead className="bg-stone-50 text-start">
@@ -39,6 +82,7 @@ export function SalesListPage() {
               <th>{t("sales.customer")}</th>
               <th>{t("date")}</th>
               <th>{t("sales.payment")}</th>
+              <th>{t("sales.channel")}</th>
               <th>{t("total")}</th>
               <th>{t("status")}</th>
             </tr>
@@ -52,6 +96,7 @@ export function SalesListPage() {
                 <td>{o.customer.name} · {o.customer.mobile}</td>
                 <td>{fmtDate(o.createdAt, locale)}</td>
                 <td>{o.paymentMethod.name}</td>
+                <td>{channelLabel(o.salesChannel, t)}</td>
                 <td>{money(Number(o.finalAmount), tenant?.currency, locale)}</td>
                 <td>{o.status}</td>
               </tr>
@@ -78,7 +123,10 @@ export function SaleDetailPage() {
   const change = Number(data.changeAmount ?? 0);
   return (
     <div>
-      <PageHeader title={data.orderNumber} subtitle={`${data.customer.name} · ${data.customer.mobile}`} />
+      <PageHeader
+        title={data.orderNumber}
+        subtitle={`${data.customer.name} · ${data.customer.mobile} · ${channelLabel(data.salesChannel, t)}`}
+      />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           {(data.lines as any[]).map((l) => {
@@ -133,6 +181,10 @@ export function SaleDetailPage() {
           })}
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
+              <span>{t("sales.channel")}</span>
+              <span>{channelLabel(data.salesChannel, t)}</span>
+            </div>
+            <div className="flex justify-between">
               <span>{t("pos.subtotal")}</span>
               <span>{money(Number(data.subtotal ?? data.finalAmount), tenant?.currency, locale)}</span>
             </div>
@@ -157,11 +209,8 @@ export function SaleDetailPage() {
         <Card>
           <h3 className="mb-3 font-semibold">{t("sales.consumed")}</h3>
           {(data.movements ?? []).map((m: any) => (
-            <div key={m.id} className="flex justify-between text-sm">
-              <span>{m.item.name}</span>
-              <span>
-                {Number(m.quantity)} {m.unit.toLowerCase()}
-              </span>
+            <div key={m.id} className="mb-2 text-sm">
+              {m.item?.name}: {m.quantity} {m.unit}
             </div>
           ))}
         </Card>

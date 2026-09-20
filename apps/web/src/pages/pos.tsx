@@ -166,6 +166,7 @@ export function PosPage() {
           customerId: pos.customer.id,
           discountId: pos.discountId,
           paymentMethodId: pos.paymentMethodId,
+          salesChannel: pos.salesChannel,
           amountReceived: received,
           lines,
         }),
@@ -401,6 +402,24 @@ export function PosPage() {
                 {p.name}
               </Button>
             ))}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={pos.salesChannel === "IN_SHOP" ? "primary" : "outline"}
+              className="flex-1"
+              onClick={() => pos.setSalesChannel("IN_SHOP")}
+            >
+              {t("pos.channelInShop")}
+            </Button>
+            <Button
+              type="button"
+              variant={pos.salesChannel === "ONLINE" ? "primary" : "outline"}
+              className="flex-1"
+              onClick={() => pos.setSalesChannel("ONLINE")}
+            >
+              {t("pos.channelOnline")}
+            </Button>
           </div>
           <Button className="w-full py-3" disabled={complete.isPending || discountTooHigh} onClick={() => complete.mutate()}>
             {t("pos.completeSale")}

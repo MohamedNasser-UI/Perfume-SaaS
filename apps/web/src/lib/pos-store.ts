@@ -67,6 +67,7 @@ type PosState = {
   discountId?: string;
   discountPct: number;
   paymentMethodId?: string;
+  salesChannel: "IN_SHOP" | "ONLINE";
   amountReceived?: number;
   tenderMode: "auto" | "preset" | "manual";
   setCustomer: (c: Customer | null) => void;
@@ -76,6 +77,7 @@ type PosState = {
   setDiscount: (id: string | undefined, pct: number) => void;
   setAmountReceived: (value: number) => void;
   setPayment: (id: string) => void;
+  setSalesChannel: (channel: "IN_SHOP" | "ONLINE") => void;
   clear: () => void;
 };
 
@@ -83,6 +85,7 @@ export const usePos = create<PosState>((set) => ({
   customer: null,
   lines: [],
   discountPct: 0,
+  salesChannel: "IN_SHOP",
   tenderMode: "auto",
   setCustomer: (customer) => set({ customer }),
   addLine: (line) => set((s) => ({ lines: [...s.lines, line] })),
@@ -113,6 +116,7 @@ export const usePos = create<PosState>((set) => ({
       discountPct: 0,
     }),
   setPayment: (paymentMethodId) => set({ paymentMethodId }),
+  setSalesChannel: (salesChannel) => set({ salesChannel }),
   clear: () =>
     set({
       customer: null,
@@ -120,6 +124,7 @@ export const usePos = create<PosState>((set) => ({
       discountId: undefined,
       discountPct: 0,
       paymentMethodId: undefined,
+      salesChannel: "IN_SHOP",
       amountReceived: undefined,
       tenderMode: "auto",
     }),

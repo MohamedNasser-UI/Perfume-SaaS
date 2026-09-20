@@ -197,6 +197,7 @@ export class SalesService {
           grossProfit: grossProfit.toFixed(4),
           paymentMethodId: payment.id,
           paymentReference: input.paymentReference,
+          salesChannel: input.salesChannel ?? "IN_SHOP",
           status: "COMPLETED",
           createdById: userId,
         },
@@ -301,12 +302,17 @@ export class SalesService {
     });
   }
 
-  async list(tenantId: string, outletId: string, query: { q?: string; customerId?: string }) {
+  async list(
+    tenantId: string,
+    outletId: string,
+    query: { q?: string; customerId?: string; salesChannel?: "IN_SHOP" | "ONLINE" },
+  ) {
     return this.prisma.salesOrder.findMany({
       where: {
         tenantId,
         outletId,
         ...(query.customerId ? { customerId: query.customerId } : {}),
+        ...(query.salesChannel ? { salesChannel: query.salesChannel } : {}),
         ...(query.q
           ? {
               OR: [

@@ -76,6 +76,11 @@ enum SalesStatus {
   PARTIALLY_RETURNED
 }
 
+enum SalesChannel {
+  IN_SHOP
+  ONLINE
+}
+
 enum LineType {
   CUSTOMIZED
   ORIGINAL
@@ -818,6 +823,7 @@ model SalesOrder {
   grossProfit        Decimal   @map("gross_profit") @db.Decimal(18, 4)
   paymentMethodId    String    @map("payment_method_id")
   paymentReference   String?   @map("payment_reference")
+  salesChannel       SalesChannel @default(IN_SHOP) @map("sales_channel")
   status             SalesStatus @default(COMPLETED)
   createdById        String    @map("created_by")
   createdAt          DateTime  @default(now()) @map("created_at")
@@ -834,6 +840,7 @@ model SalesOrder {
   @@unique([outletId, orderNumber])
   @@index([tenantId, createdAt])
   @@index([customerId])
+  @@index([tenantId, salesChannel])
   @@map("sales_orders")
 }
 

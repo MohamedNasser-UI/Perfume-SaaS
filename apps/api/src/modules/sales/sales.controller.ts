@@ -27,8 +27,10 @@ export class SalesController {
     @OutletId() outletId: string,
     @Query("q") q?: string,
     @Query("customerId") customerId?: string,
+    @Query("salesChannel") salesChannel?: "IN_SHOP" | "ONLINE",
   ) {
-    return this.sales.list(tenantId, outletId, { q, customerId });
+    const channel = salesChannel === "IN_SHOP" || salesChannel === "ONLINE" ? salesChannel : undefined;
+    return this.sales.list(tenantId, outletId, { q, customerId, salesChannel: channel });
   }
 
   @Get("sales/:id")
