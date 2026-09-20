@@ -1,5 +1,5 @@
 import type { PrismaClient, LineType } from "@prisma/client";
-import { nextNumber } from "../../src/common/sequences";
+import { nextNumber } from "../common/sequences";
 import { DEMO_MARKER } from "./constants";
 import type { CatalogIds } from "./catalog";
 import type { PartiesIds } from "./parties";

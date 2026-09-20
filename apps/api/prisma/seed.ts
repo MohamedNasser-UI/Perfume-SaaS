@@ -2,12 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { seedTenantDefaults } from "../src/modules/platform/tenant-defaults";
 import { ensureSequences } from "../src/common/sequences";
-import { DEMO_SLUG, DEMO_TENANT_NAME, DEMO_OUTLET_NAME, DEMO_MARKER } from "./demo-template/constants";
-import { seedCatalog } from "./demo-template/catalog";
-import { seedParties } from "./demo-template/parties";
-import { StockLedger } from "./demo-template/stock";
-import { seedOpeningBalances, seedHistory } from "./demo-template/transactions";
-import { printVerification } from "./demo-template/verify";
+import { DEMO_SLUG, DEMO_TENANT_NAME, DEMO_OUTLET_NAME, DEMO_MARKER } from "../src/demo-template/constants";
+import { seedDemoTemplateContent } from "../src/demo-template/seed-content";
+import { printVerification } from "../src/demo-template/verify";
 
 const prisma = new PrismaClient();
 
@@ -50,6 +47,7 @@ async function main() {
         timezone: "Africa/Cairo",
         locale: "ar-EG",
         country: "EG",
+        isDemo: true,
         notes: `MASTER DEMO TEMPLATE | ${DEMO_MARKER}`,
         status: "ACTIVE",
       },
@@ -63,6 +61,7 @@ async function main() {
         currency: "EGP",
         timezone: "Africa/Cairo",
         country: "EG",
+        isDemo: true,
         notes: `MASTER DEMO TEMPLATE | ${DEMO_MARKER}`,
         status: "ACTIVE",
       },
@@ -129,25 +128,12 @@ async function main() {
 
   console.log(isNew ? "Created demo tenant" : "Updated demo tenant", tenant.id);
 
-  console.log("Seeding catalog…");
-  const catalog = await seedCatalog(prisma, tenant.id);
-
-  console.log("Seeding suppliers & customers…");
-  const parties = await seedParties(prisma, tenant.id, owner.id);
-
-  console.log("Seeding opening balances…");
-  const ledger = new StockLedger();
-  await seedOpeningBalances(prisma, tenant.id, outlet.id, owner.id, catalog, ledger);
-
-  console.log("Seeding purchase/sales/return history…");
-  const history = await seedHistory(prisma, {
+  const { history } = await seedDemoTemplateContent(prisma, {
     tenantId: tenant.id,
     outletId: outlet.id,
-    ownerId: owner.id,
-    catalog,
-    parties,
-    ledger,
+    createdById: owner.id,
     forceReseed: process.env.FORCE_DEMO_RESEED === "1",
+    log: (message) => console.log(message),
   });
 
   const report = await printVerification(prisma, tenant.id, outlet.id);

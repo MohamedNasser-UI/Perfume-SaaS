@@ -83,7 +83,9 @@ export function LoginPage() {
           <LanguageSwitcher />
         </div>
         {tenant?.name ? <p className="mt-2 text-sm text-gold">{tenant.name}</p> : null}
+
         <p className="mt-2 text-sm text-stone-500">{offlinePicker ? t("login.whoAreYou") : t("login.subtitle")}</p>
+
         <div className="mt-8 space-y-4">
           {offlinePicker ? (
             <div className="space-y-2">

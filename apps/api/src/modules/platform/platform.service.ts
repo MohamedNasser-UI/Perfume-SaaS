@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { CreateTenantInput } from "@perfume/validation";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { ensureSequences } from "../../common/sequences";
 import { seedTenantDefaults } from "./tenant-defaults";
+import { DEMO_MARKER } from "../../demo-template/constants";
+import { seedDemoTemplateContent } from "../../demo-template/seed-content";
 
 @Injectable()
 export class PlatformService {
@@ -43,8 +45,12 @@ export class PlatformService {
     if (emailTaken) throw new BadRequestException("Owner email already in use");
 
     const passwordHash = await this.auth.hashPassword(input.ownerPassword);
+    const isDemo = input.accountType === "DEMO";
+    const notes = isDemo
+      ? [input.notes, `DEMO ACCOUNT | ${DEMO_MARKER}`].filter(Boolean).join(" | ")
+      : input.notes;
 
-    return this.prisma.$transaction(async (tx) => {
+    const provisioned = await this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
           name: input.name,
@@ -53,7 +59,8 @@ export class PlatformService {
           timezone: input.timezone ?? "Africa/Cairo",
           locale: input.locale ?? "en-EG",
           country: input.country ?? "EG",
-          notes: input.notes,
+          isDemo,
+          notes,
           status: "ACTIVE",
         },
       });
@@ -88,12 +95,34 @@ export class PlatformService {
           action: "CREATE",
           entity: "TENANT",
           entityId: tenant.id,
-          after: { name: tenant.name, slug: tenant.slug },
+          after: { name: tenant.name, slug: tenant.slug, isDemo },
         },
       });
 
       return { tenant, outlet, owner: { id: owner.id, email: owner.email, displayName: owner.displayName } };
     });
+
+    if (isDemo) {
+      try {
+        await seedDemoTemplateContent(this.prisma, {
+          tenantId: provisioned.tenant.id,
+          outletId: provisioned.outlet.id,
+          createdById: provisioned.owner.id,
+        });
+      } catch (err) {
+        await this.prisma.tenant.update({
+          where: { id: provisioned.tenant.id },
+          data: {
+            status: "SUSPENDED",
+            notes: [`DEMO_SEED_FAILED | ${DEMO_MARKER}`, notes].filter(Boolean).join(" | "),
+          },
+        });
+        const message = err instanceof Error ? err.message : "Demo seed failed";
+        throw new InternalServerErrorException(`Demo account created but seeding failed: ${message}`);
+      }
+    }
+
+    return provisioned;
   }
 
   async updateStatus(id: string, status: "ACTIVE" | "SUSPENDED", notes: string | undefined, actorId: string) {

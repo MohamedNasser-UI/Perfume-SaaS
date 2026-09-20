@@ -57,6 +57,7 @@ export function PlatformPage() {
   const [form, setForm] = useState({
     name: "",
     slug: "",
+    accountType: "REAL" as "REAL" | "DEMO",
     currency: "EGP",
     country: "EG",
     outletName: "Main Outlet",
@@ -83,6 +84,24 @@ export function PlatformPage() {
       <PageHeader title={t("platform.title")} subtitle={t("platform.subtitle")} />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="space-y-3">
+          <Label>{t("platform.accountType")}</Label>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={form.accountType === "REAL" ? "primary" : "outline"}
+              onClick={() => setForm({ ...form, accountType: "REAL" })}
+            >
+              {t("platform.accountReal")}
+            </Button>
+            <Button
+              type="button"
+              variant={form.accountType === "DEMO" ? "primary" : "outline"}
+              onClick={() => setForm({ ...form, accountType: "DEMO" })}
+            >
+              {t("platform.accountDemo")}
+            </Button>
+          </div>
+          <p className="text-xs text-stone-500">{t("platform.accountTypeHint")}</p>
           <Label>{t("platform.business")}</Label>
           <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") })} />
           <Label>{t("platform.slug")}</Label>
@@ -95,14 +114,23 @@ export function PlatformPage() {
           <Input value={form.ownerEmail} onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })} />
           <Label>{t("platform.tempPassword")}</Label>
           <Input value={form.ownerPassword} onChange={(e) => setForm({ ...form, ownerPassword: e.target.value })} />
-          <Button onClick={() => create.mutate()}>{t("platform.create")}</Button>
+          <Button onClick={() => create.mutate()} disabled={create.isPending}>
+            {create.isPending ? t("platform.creating") : t("platform.create")}
+          </Button>
         </Card>
         <Card>
           {(data ?? []).map((tenant) => (
             <div key={tenant.id} className="border-b py-3">
               <div className="flex items-center justify-between">
                 <button className="text-left" onClick={() => setOpenId(openId === tenant.id ? null : tenant.id)}>
-                  <div className="font-medium">{tenant.name}</div>
+                  <div className="flex items-center gap-2 font-medium">
+                    <span>{tenant.name}</span>
+                    {tenant.isDemo ? (
+                      <span className="rounded border border-amber-700/30 bg-amber-50 px-1.5 py-0.5 text-[10px] font-sans font-medium uppercase tracking-wide text-amber-900">
+                        {t("platform.demoBadge")}
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="text-xs text-stone-500">
                     {tenant.slug} · {tenant.status} · {t("platform.outletsCount", { count: tenant._count?.outlets ?? 0 })}
                   </div>

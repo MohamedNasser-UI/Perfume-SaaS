@@ -154,6 +154,7 @@ model Tenant {
   name      String
   slug      String       @unique
   status    TenantStatus @default(ACTIVE)
+  isDemo    Boolean      @default(false) @map("is_demo")
   currency  String       @default("EGP")
   timezone  String       @default("Africa/Cairo")
   locale    String       @default("en-EG")

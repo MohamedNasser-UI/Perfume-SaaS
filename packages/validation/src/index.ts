@@ -52,6 +52,7 @@ export const createTenantSchema = z.object({
     .string()
     .min(2)
     .regex(/^[a-z0-9-]+$/),
+  accountType: z.enum(["REAL", "DEMO"]).default("REAL"),
   currency: z.string().min(3).max(3).default("EGP"),
   timezone: z.string().default("Africa/Cairo"),
   locale: z.string().default("en-EG"),

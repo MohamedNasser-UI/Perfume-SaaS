@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-20T19:50:00.000Z",
+  "title": "Design System: Scent Pro",
+  "extensions": {
+    "colorMeta": {
+      "boutique-ink": {
+        "role": "primary",
+        "displayName": "Boutique Ink",
+        "canonical": "#1c1917",
+        "tonalRamp": ["#14110f", "#1c1917", "#292524", "#44403c", "#78716c", "#a8a29e", "#e7e5e4", "#fafaf9"]
+      },
+      "ink-hover": {
+        "role": "primary",
+        "displayName": "Ink Hover",
+        "canonical": "#292524",
+        "tonalRamp": ["#1c1917", "#292524", "#44403c", "#57534e", "#78716c", "#a8a29e", "#d6d3d1", "#f5f5f4"]
+      },
+      "atelier-brass": {
+        "role": "secondary",
+        "displayName": "Atelier Brass",
+        "canonical": "#b0894a",
+        "tonalRamp": ["#5c4524", "#7a5c30", "#966c3a", "#b0894a", "#c4a36e", "#d4b483", "#e8d4b0", "#f5ecd9"]
+      },
+      "champagne-highlight": {
+        "role": "secondary",
+        "displayName": "Champagne Highlight",
+        "canonical": "#d4b483",
+        "tonalRamp": ["#7a5c30", "#966c3a", "#b0894a", "#c4a36e", "#d4b483", "#e0c9a0", "#ebe0c8", "#f7f1e6"]
+      },
+      "shop-paper": {
+        "role": "neutral",
+        "displayName": "Shop Paper",
+        "canonical": "#f7f3ee",
+        "tonalRamp": ["#78716c", "#a8a29e", "#d6d3d1", "#e7e5e4", "#efeae3", "#f7f3ee", "#faf7f2", "#fffcf8"]
+      },
+      "stone-border": {
+        "role": "neutral",
+        "displayName": "Stone Border",
+        "canonical": "#e7e5e4",
+        "tonalRamp": ["#57534e", "#78716c", "#a8a29e", "#d6d3d1", "#e7e5e4", "#f5f5f4", "#fafaf9", "#ffffff"]
+      },
+      "stone-muted": {
+        "role": "neutral",
+        "displayName": "Stone Muted",
+        "canonical": "#78716c",
+        "tonalRamp": ["#292524", "#44403c", "#57534e", "#78716c", "#a8a29e", "#d6d3d1", "#e7e5e4", "#f5f5f4"]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#d6d3d1", "#e7e5e4", "#f5f5f4", "#fafaf9", "#ffffff", "#ffffff", "#ffffff", "#ffffff"]
+      },
+      "danger": {
+        "role": "primary",
+        "displayName": "Danger",
+        "canonical": "#b91c1c",
+        "tonalRamp": ["#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fecaca", "#fef2f2"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles, POS totals, builder headers (Fraunces / Cairo)." },
+      "headline": { "displayName": "Headline", "purpose": "Section and modal titles." },
+      "title": { "displayName": "Title", "purpose": "Button labels, row emphasis." },
+      "body": { "displayName": "Body", "purpose": "Tables, forms, descriptions." },
+      "label": { "displayName": "Label", "purpose": "Uppercase field labels." }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "purpose": "Default Card elevation."
+      },
+      {
+        "name": "panel-lift",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Dropdowns and auth panels only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "nav-drawer",
+        "value": "transform 200ms ease",
+        "purpose": "Sidebar open/close."
+      },
+      {
+        "name": "control-transition",
+        "value": "background-color 150ms ease, border-color 150ms ease, color 150ms ease",
+        "purpose": "Buttons and choice tiles."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Solid Boutique Ink CTA for primary till and form actions.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Complete sale</button>",
+      "css": ".ds-btn-primary { background: #1c1917; color: #fff; padding: 8px 16px; border: none; border-radius: 8px; font-family: \"DM Sans\", Cairo, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-primary:hover { background: #292524; } .ds-btn-primary:focus-visible { outline: 2px solid color-mix(in srgb, #b0894a 40%, transparent); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Idle payment/channel toggles and secondary actions.",
+      "html": "<button class=\"ds-btn-outline\" type=\"button\">Online</button>",
+      "css": ".ds-btn-outline { background: #fff; color: #1c1917; padding: 8px 16px; border: 1px solid #d6d3d1; border-radius: 8px; font-family: \"DM Sans\", Cairo, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-outline:hover { background: #fafaf9; } .ds-btn-outline:focus-visible { outline: 2px solid color-mix(in srgb, #b0894a 40%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Default form and POS inputs with brass-tinted focus ring.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">Amount received</span><input class=\"ds-input\" type=\"number\" value=\"0\" /></label>",
+      "css": ".ds-field { display: block; } .ds-label { display: block; margin-bottom: 4px; font-family: \"DM Sans\", Cairo, sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #78716c; } .ds-input { width: 100%; box-sizing: border-box; border: 1px solid #d6d3d1; border-radius: 8px; background: #fff; color: #1c1917; padding: 8px 12px; font-family: \"DM Sans\", Cairo, sans-serif; font-size: 0.875rem; outline: none; } .ds-input:focus { box-shadow: 0 0 0 2px color-mix(in srgb, #b0894a 40%, transparent); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "White content surface on Shop Paper with soft rest shadow.",
+      "html": "<div class=\"ds-card\"><h2 class=\"ds-card-title\">Net total</h2><p class=\"ds-card-body\">1,250.00 EGP</p></div>",
+      "css": ".ds-card { background: #fff; color: #1c1917; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); } .ds-card-title { margin: 0; font-family: Fraunces, Cairo, Georgia, serif; font-size: 1.5rem; font-weight: 600; } .ds-card-body { margin: 8px 0 0; font-family: \"DM Sans\", Cairo, sans-serif; font-size: 0.875rem; color: #57534e; }"
+    },
+    {
+      "name": "Sidebar Nav",
+      "kind": "nav",
+      "refersTo": "nav-aside",
+      "description": "Ink sidebar with brass-tinted active item.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-brand\">Scent <span>Pro</span></div><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\">New sale</a><a class=\"ds-nav-item\" href=\"#\">Sales history</a></nav>",
+      "css": ".ds-nav { width: 256px; background: #1c1917; color: #e7e5e4; padding: 24px 20px; font-family: \"DM Sans\", Cairo, sans-serif; } .ds-brand { font-family: Fraunces, Cairo, Georgia, serif; font-size: 1.25rem; color: #fff; margin-bottom: 24px; } .ds-brand span { color: #b0894a; } .ds-nav-item { display: block; padding: 10px 12px; border-radius: 8px; color: #d6d3d1; text-decoration: none; font-size: 0.875rem; font-weight: 500; margin-bottom: 4px; } .ds-nav-item:hover { background: rgb(255 255 255 / 0.06); } .ds-nav-item-active { background: color-mix(in srgb, #b0894a 20%, transparent); color: #d4b483; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "button-outline",
+      "description": "Pill filter used in POS builders; selected uses ink fill.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip-on\" type=\"button\">In shop</button><button class=\"ds-chip\" type=\"button\">Online</button></div>",
+      "css": ".ds-chips { display: flex; gap: 8px; } .ds-chip { border-radius: 9999px; padding: 8px 16px; font-family: \"DM Sans\", Cairo, sans-serif; font-size: 0.875rem; font-weight: 600; border: 1px solid #e7e5e4; background: #fff; color: #1c1917; cursor: pointer; } .ds-chip-on { background: #1c1917; color: #fff; border-color: #1c1917; } .ds-chip:focus-visible { outline: 2px solid color-mix(in srgb, #b0894a 40%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "BrandName",
+      "kind": "custom",
+      "refersTo": "button-primary",
+      "description": "Canonical Scent Pro wordmark lockup.",
+      "html": "<span class=\"ds-brandname\">Scent <span>Pro</span></span>",
+      "css": ".ds-brandname { font-family: Fraunces, Cairo, Georgia, serif; font-size: 1.5rem; font-weight: 600; color: #1c1917; } .ds-brandname span { color: #b0894a; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Boutique Atelier Counter",
+    "overview": "Scent Pro’s interface should feel like a refined perfume boutique counter that also runs a serious retail operating system: warm shop paper, ink as authority, and brass reserved for brand and wayfinding. Density stays till-first — scanable tables, large POS taps, obvious primary actions — while serif display moments (page titles, totals, builder headers) carry restrained luxury without slowing the cashier.\n\nThe system is bilingual: English uses Fraunces + DM Sans; Arabic prefers Cairo while keeping the same hierarchy and roles. RTL is a first-class layout mode, not an afterthought. Per-tenant themes may recolor ink, brass, and paper; gold remains the canonical Scent Pro brand identity and the reference for documentation.",
+    "keyCharacteristics": [
+      "Warm paper canvas with ink primary actions and brass accents",
+      "Serif for display/brand; sans for body/ops density",
+      "Flat-by-default surfaces; soft card shadow only",
+      "Till-first clarity: decisive selected states, large POS targets",
+      "Theme-swappable tokens with stable semantic roles"
+    ],
+    "rules": [
+      { "name": "The One Brass Rule", "body": "Atelier Brass is for brand, links, focus, and selection hints — not large fills. Primary fills stay Boutique Ink (or theme ink).", "section": "colors" },
+      { "name": "The Theme Swap Rule", "body": "Gold is canonical. Tenant themes may remap the five CSS variables only. Component hierarchy, density, and UX behavior must not change.", "section": "colors" },
+      { "name": "The Serif Moment Rule", "body": "Serif is for brand and display totals/titles — not dense table body text.", "section": "typography" },
+      { "name": "The Till Density Rule", "body": "Prefer scannable lists and large tap targets on POS over decorative whitespace.", "section": "layout" },
+      { "name": "The Flat-By-Default Rule", "body": "No glow stacks, glassmorphism, or decorative multi-layer shadows on ops surfaces.", "section": "elevation" },
+      { "name": "The Soft Counter Rule", "body": "Prefer rounded-lg/2xl over sharp zero-radius or oversized capsules on primary buttons.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do use Boutique Ink for primary actions and Atelier Brass for brand/links/focus.",
+      "Do keep Fraunces for display titles and totals; DM Sans/Cairo for body and tables.",
+      "Do preserve RTL and Arabic Cairo overrides when locale is ar.",
+      "Do keep theme swaps limited to the five CSS variables; preserve roles and hierarchy.",
+      "Do make selected payment/channel/POS states visually obvious (ink fill or strong border)."
+    ],
+    "donts": [
+      "Don't use purple SaaS gradients, neon accents, or heavy glassmorphism.",
+      "Don't flood screens with brass fills — brass is accent, not the canvas.",
+      "Don't put serif on dense table cells or long body copy.",
+      "Don't invent a second layout language per theme; themes recolor, they don’t redesign.",
+      "Don't replace the Scent Pro wordmark/logo treatment without an explicit rebrand."
+    ]
+  }
+}

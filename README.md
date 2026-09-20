@@ -36,13 +36,28 @@ npm run dev
 
 Keep `VITE_API_URL=/api/v1` (relative). The Vite dev server proxies `/api` to the API so the refresh cookie is first-party.
 
+### Demo template tenant
+
+Seed creates / updates the **master demo template** (slug `noor-perfume`, `isDemo: true`):
+
+- Display name: **متجر سينت برو التجريبي** (ScentPro Demo Store)
+- Locale `ar-EG`, currency EGP
+- Arabic catalog (ready-made, oils, bottles), Egyptian customers/suppliers, and ~60 days of sample purchases/sales/returns
+- Notes field marks it as `MASTER DEMO TEMPLATE`
+
+Catalog names are stored in Arabic only (no schema bilingual fields). UI chrome still switches EN/AR via the language switcher.
+
+Re-running `npm run prisma:seed` is idempotent: it will not duplicate demo purchase/sale history. Destructive reseed is blocked unless you explicitly request assisted cleanup (`FORCE_DEMO_RESEED` refuses without confirmation).
+
+Platform admins can also create additional **Demo accounts** from `/platform` (choose **Demo account** instead of **Real account**). Each demo gets the same seeded sample data under a new tenant, with the owner email/password entered on the form. Real accounts stay empty aside from config defaults.
+
 ### Demo logins
 
 | Role | Email | Password |
 |---|---|---|
 | Platform admin | admin@perfume.saas | ChangeMe123! |
-| Tenant owner | owner@noor.perfume | ChangeMe123! |
-| Staff | staff@noor.perfume | ChangeMe123! |
+| Demo tenant owner | owner@noor.perfume | ChangeMe123! |
+| Demo staff | staff@noor.perfume | ChangeMe123! |
 
 ### Forgot password
 
@@ -81,7 +96,7 @@ Nginx on port 80 proxies `/api/` to the API and everything else to the web app. 
 ## How onboarding works
 
 1. Sign in as platform admin.
-2. Create a tenant (business name, first outlet, owner email + password).
+2. Create a tenant: choose **Real account** (empty catalog) or **Demo account** (sample catalog + history), then business name, first outlet, owner email + password.
 3. Send the owner their login. Their catalog, stock, customers, and sales are isolated by `tenant_id`.
 4. Suspend the tenant if they stop paying.
 
