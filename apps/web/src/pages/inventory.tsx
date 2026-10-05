@@ -425,16 +425,57 @@ export function WastePage() {
 }
 
 export function AdjustmentsPage() {
-  const { t } = useI18n();
+  const { tenant, user } = useAuth();
+  const { t, locale } = useI18n();
+  const seeCost = canSeeItemCost(user?.role, user?.seeItemCost);
   const qc = useQueryClient();
   const items = useQuery({ queryKey: ["catalog-items"], queryFn: () => api<CatalogItem[]>("/catalog/items") });
-  const list = useQuery({ queryKey: ["adj"], queryFn: () => api<any[]>("/inventory/adjustments") });
-  const [form, setForm] = useState({ itemId: "", quantity: 0, unit: "ML", reason: "Count", isOpeningBalance: false, unitCost: 0 });
+  const inventory = useQuery({ queryKey: ["inventory"], queryFn: () => api<InventoryRow[]>("/inventory") });
+  const [form, setForm] = useState({
+    itemId: "",
+    increaseQty: "",
+    decreaseQty: "",
+    unit: "ML",
+    costMode: "AVERAGE" as "AVERAGE" | "CUSTOM",
+    unitCost: "",
+    reason: "Count",
+    isOpeningBalance: false,
+  });
   const pickerItems = useMemo(() => catalogPickerItems(items.data), [items.data]);
+  const selectedStock = useMemo(
+    () => (form.itemId ? (inventory.data ?? []).find((r) => r.itemId === form.itemId) : undefined),
+    [form.itemId, inventory.data],
+  );
   const mutate = useMutation({
-    mutationFn: () => api("/inventory/adjustments", { method: "POST", body: JSON.stringify(form) }),
+    mutationFn: () => {
+      const increase = form.increaseQty === "" ? 0 : Number(form.increaseQty);
+      const decrease = form.decreaseQty === "" ? 0 : Number(form.decreaseQty);
+      if (increase > 0 && decrease > 0) throw new Error(t("inventory.adjustOneDirection"));
+      if (increase <= 0 && decrease <= 0) throw new Error(t("inventory.adjustNeedQty"));
+      if (increase < 0 || decrease < 0) throw new Error(t("inventory.adjustNeedQty"));
+      const quantity = increase > 0 ? increase : -decrease;
+      let unitCost: number | undefined;
+      if (form.costMode === "CUSTOM") {
+        if (form.unitCost === "" || Number.isNaN(Number(form.unitCost)) || Number(form.unitCost) < 0) {
+          throw new Error(t("inventory.adjustNeedUnitCost"));
+        }
+        unitCost = Number(form.unitCost);
+      }
+      return api("/inventory/adjustments", {
+        method: "POST",
+        body: JSON.stringify({
+          itemId: form.itemId,
+          quantity,
+          unit: form.unit,
+          reason: form.reason,
+          isOpeningBalance: form.isOpeningBalance,
+          ...(unitCost !== undefined ? { unitCost } : {}),
+        }),
+      });
+    },
     onSuccess: () => {
       toast.success(t("inventory.posted"));
+      setForm((prev) => ({ ...prev, increaseQty: "", decreaseQty: "", unitCost: "" }));
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -442,43 +483,121 @@ export function AdjustmentsPage() {
   return (
     <div>
       <PageHeader title={t("inventory.adjustTitle")} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="space-y-3">
-          <Label>{t("item")}</Label>
-          <SearchSelect
-            items={pickerItems}
-            value={form.itemId}
-            onChange={(itemId) => setForm({ ...form, itemId })}
-            placeholder={t("inventory.searchItems")}
-            emptyLabel={t("inventory.noItemMatches")}
-          />
-          <Label>{t("inventory.adjustQty")}</Label>
-          <Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
-          <Label>{t("unit")}</Label>
-          <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
-            <option>ML</option>
-            <option>L</option>
-            <option>PCS</option>
-          </Select>
-          <Label>{t("reason")}</Label>
-          <Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.isOpeningBalance} onChange={(e) => setForm({ ...form, isOpeningBalance: e.target.checked })} />
-            {t("inventory.opening")}
+      <Card className="w-full space-y-3">
+        <Label>{t("item")}</Label>
+        <SearchSelect
+          items={pickerItems}
+          value={form.itemId}
+          onChange={(itemId) => setForm({ ...form, itemId })}
+          placeholder={t("inventory.searchItems")}
+          emptyLabel={t("inventory.noItemMatches")}
+        />
+        {form.itemId ? (
+          <p className="text-sm text-stone-600">
+            {t("inventory.currentStock")}:{" "}
+            <span className="font-medium text-ink">
+              {selectedStock
+                ? `${selectedStock.onHand} ${String(selectedStock.unit).toLowerCase()}`
+                : inventory.isLoading
+                  ? "…"
+                  : `0`}
+            </span>
+            {seeCost ? (
+              <>
+                {" · "}
+                {t("inventory.avgCost")}:{" "}
+                <span className="font-medium text-ink">
+                  {selectedStock && selectedStock.averageCost != null
+                    ? money(selectedStock.averageCost, tenant?.currency, locale)
+                    : inventory.isLoading
+                      ? "…"
+                      : money(0, tenant?.currency, locale)}
+                </span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>{t("inventory.increaseQty")}</Label>
+            <Input
+              type="number"
+              min={0}
+              step="any"
+              value={form.increaseQty}
+              onChange={(e) => setForm({ ...form, increaseQty: e.target.value, decreaseQty: "" })}
+              placeholder="0"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("inventory.decreaseQty")}</Label>
+            <Input
+              type="number"
+              min={0}
+              step="any"
+              value={form.decreaseQty}
+              onChange={(e) => setForm({ ...form, decreaseQty: e.target.value, increaseQty: "" })}
+              placeholder="0"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-stone-500">{t("inventory.adjustDirectionHint")}</p>
+        <Label>{t("unit")}</Label>
+        <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
+          <option>ML</option>
+          <option>L</option>
+          <option>PCS</option>
+        </Select>
+        <Label>{t("inventory.costMode")}</Label>
+        <div className="space-y-2 text-sm">
+          <label className="flex items-start gap-2">
+            <input
+              type="radio"
+              name="costMode"
+              className="mt-1"
+              checked={form.costMode === "AVERAGE"}
+              onChange={() => setForm({ ...form, costMode: "AVERAGE", unitCost: "" })}
+            />
+            <span>
+              <span className="font-medium text-ink">{t("inventory.costUseAverage")}</span>
+              <span className="mt-0.5 block text-xs text-stone-500">{t("inventory.costUseAverageHint")}</span>
+            </span>
           </label>
-          <Button onClick={() => mutate.mutate()}>{t("inventory.post")}</Button>
-        </Card>
-        <Card>
-          {(list.data ?? []).map((a) => (
-            <div key={a.id} className="flex justify-between border-b py-2 text-sm">
-              <span>
-                {a.item.name} · {a.reason}
-              </span>
-              <span>{Number(a.quantity)}</span>
-            </div>
-          ))}
-        </Card>
-      </div>
+          <label className="flex items-start gap-2">
+            <input
+              type="radio"
+              name="costMode"
+              className="mt-1"
+              checked={form.costMode === "CUSTOM"}
+              onChange={() => setForm({ ...form, costMode: "CUSTOM" })}
+            />
+            <span>
+              <span className="font-medium text-ink">{t("inventory.costCustom")}</span>
+              <span className="mt-0.5 block text-xs text-stone-500">{t("inventory.costCustomHint")}</span>
+            </span>
+          </label>
+        </div>
+        {form.costMode === "CUSTOM" ? (
+          <div className="space-y-1.5">
+            <Label>{t("inventory.unitCost")}</Label>
+            <Input
+              type="number"
+              min={0}
+              step="any"
+              value={form.unitCost}
+              onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
+              placeholder="0"
+            />
+          </div>
+        ) : null}
+        <Label>{t("reason")}</Label>
+        <Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={form.isOpeningBalance} onChange={(e) => setForm({ ...form, isOpeningBalance: e.target.checked })} />
+          {t("inventory.opening")}
+        </label>
+        <Button onClick={() => mutate.mutate()}>{t("inventory.post")}</Button>
+      </Card>
     </div>
   );
 }

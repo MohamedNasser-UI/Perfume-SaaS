@@ -61,9 +61,10 @@ export class InventoryService {
     let unitCost: Decimal;
 
     if (stockQty.gte(0)) {
-      unitCost = input.inboundUnitCost
-        ? toStockUnitCost(input.inboundUnitCost, input.unit, item.stockUnit)
-        : oldAvg;
+      unitCost =
+        input.inboundUnitCost != null
+          ? toStockUnitCost(input.inboundUnitCost, input.unit, item.stockUnit)
+          : oldAvg;
       newQty = oldQty.add(stockQty);
       const newValue = oldValue.add(stockQty.mul(unitCost));
       newAvg = newQty.eq(0) ? D(0) : newValue.div(newQty);
@@ -82,9 +83,20 @@ export class InventoryService {
           },
         });
       }
-      unitCost = oldAvg;
+      unitCost =
+        input.inboundUnitCost != null
+          ? toStockUnitCost(input.inboundUnitCost, input.unit, item.stockUnit)
+          : oldAvg;
       newQty = oldQty.add(stockQty);
-      newAvg = newQty.eq(0) ? D(0) : oldAvg;
+      if (newQty.eq(0)) {
+        newAvg = D(0);
+      } else if (input.inboundUnitCost != null) {
+        const newValue = oldValue.sub(absQty.mul(unitCost));
+        newAvg = newValue.div(newQty);
+        if (newAvg.lt(0)) newAvg = D(0);
+      } else {
+        newAvg = oldAvg;
+      }
     }
 
     const newValue = newQty.mul(newAvg);
@@ -354,7 +366,7 @@ export class InventoryService {
         movementType,
         referenceType: "ADJUSTMENT",
         referenceId: adj.id,
-        inboundUnitCost: body.quantity > 0 ? (body.unitCost ?? 0) : undefined,
+        inboundUnitCost: body.unitCost,
         reason: body.reason,
         createdById: userId,
         allowNegative: true,
